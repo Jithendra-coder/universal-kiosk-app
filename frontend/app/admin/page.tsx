@@ -8,7 +8,6 @@ import {
   Clock, Rocket, ImageIcon, CalendarDays, Leaf, Drumstick, Banknote, Globe, Pizza, Coffee, CakeSlice
 } from 'lucide-react';
 
-// Common Currencies List
 const CURRENCIES = [
   { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
   { code: 'USD', symbol: '$', name: 'US Dollar' },
@@ -23,15 +22,15 @@ export default function AdminDashboard() {
   const [settings, setSettings] = useState<any>({ currency_symbol: '₹', store_name: 'Loading...', id: null });
 
   const refreshSettings = useCallback(async () => {
-    const { data } = await supabase.from('restaurant_settings').select('*').limit(1).single();
+    const { data, error } = await supabase.from('restaurant_settings').select('*').limit(1).single();
     if (data) setSettings(data);
+    if (error) console.error("Settings Fetch Error:", error.message);
   }, []);
 
   useEffect(() => { refreshSettings(); }, [refreshSettings]);
 
   return (
     <main className="flex h-screen bg-[#F8FAFC] font-sans text-slate-900 overflow-hidden">
-      {/* --- SIDEBAR --- */}
       <aside className="w-80 bg-slate-950 text-white flex flex-col p-8 shadow-2xl">
         <div className="mb-12">
             <h1 className="text-3xl font-black tracking-tighter text-orange-500 italic uppercase">Core <span className="text-white">Pro</span></h1>
@@ -77,7 +76,7 @@ function OverviewTab({ settings }: { settings: any }) {
   return (
     <div className="space-y-10 animate-in fade-in">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <StatCard title="Revenue Today" value={`${settings.currency_symbol}${stats.revenue}`} icon={<TrendingUp size={24}/>} />
+        <StatCard title="Revenue Today" value={`${settings.currency_symbol}${stats.revenue}`} icon={<TrendingUp size={24}/>} pulse />
         <StatCard title="Total Orders" value={stats.orders} icon={<Package size={24}/>} />
         <StatCard title="Avg. Order Value" value={`${settings.currency_symbol}${stats.avg.toFixed(2)}`} icon={<Banknote size={24}/>} />
       </div>
@@ -181,8 +180,9 @@ function MenuPage({ settings }: { settings: any }) {
     const [formData, setFormData] = useState({ name: '', price: '', category: 'Main', item_type: 'Veg', image_path: '' });
 
     const fetchProducts = useCallback(async () => {
-        const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-        setProducts(data || []);
+        const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+        if (data) setProducts(data);
+        if (error) console.error("Fetch Products Error:", error.message);
     }, []);
 
     useEffect(() => { fetchProducts(); }, [fetchProducts]);
@@ -204,39 +204,44 @@ function MenuPage({ settings }: { settings: any }) {
         }
         setUploading(true);
         const fileName = `${Date.now()}-${file.name}`;
-        const { data } = await supabase.storage.from('product-images').upload(fileName, file);
+        const { data, error } = await supabase.storage.from('product-images').upload(fileName, file);
         if (data) {
             const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(data.path);
             setFormData(prev => ({ ...prev, image_path: publicUrl }));
         }
+        if (error) alert("Upload Error: " + error.message);
         setUploading(false);
     };
 
     const handleSave = async (e: any) => {
         e.preventDefault();
         
-        // Ensure we only send columns that exist in Supabase
+        // CLEAN PAYLOAD: Only send exactly what the DB expects. No extra fields.
         const payload = { 
             name: formData.name,
             price: parseFloat(formData.price),
             category: formData.category,
             item_type: formData.item_type,
-            image_path: formData.image_path === "" ? null : formData.image_path,
-            restaurant_id: settings.id // Mapping to your rest_id / restaurant_id column
+            image_path: formData.image_path || null,
+            restaurant_id: settings.id // This must match your rest_id/restaurant_id column name
         };
 
+        let result;
         if (editingId) {
-            const { error } = await supabase.from('products').update(payload).eq('id', editingId);
-            if (error) alert("Update Error: " + error.message);
+            result = await supabase.from('products').update(payload).eq('id', editingId);
         } else {
-            const { error } = await supabase.from('products').insert([payload]);
-            if (error) alert("Insert Error: " + error.message);
+            result = await supabase.from('products').insert([payload]);
         }
 
-        setIsModalOpen(false);
-        setEditingId(null);
-        setFormData({ name: '', price: '', category: 'Main', item_type: 'Veg', image_path: '' });
-        fetchProducts();
+        if (result.error) {
+            // This alert will reveal if a column like 'user_id' is being forced by a trigger or policy
+            alert(`Database Error: ${result.error.message}\nHint: ${result.error.hint || 'Check for missing columns'}`);
+        } else {
+            setIsModalOpen(false);
+            setEditingId(null);
+            setFormData({ name: '', price: '', category: 'Main', item_type: 'Veg', image_path: '' });
+            fetchProducts();
+        }
     };
 
     const openEdit = (p: any) => {
