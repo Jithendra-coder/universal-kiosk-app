@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException, Depends, Header
+import os
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from uuid import UUID
@@ -10,10 +11,13 @@ import schemas
 app = FastAPI(title="Universal Food Kiosk API")
 
 # --- 1. SECURITY & CORS ---
-# This allows your React frontend (Vite) to talk to this Python backend
+# We pull the allowed origins from environment variables for security
+# If no variable is found, it defaults to localhost for development
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, change "*" to your frontend URL
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -30,9 +34,7 @@ async def get_active_menu(restaurant_id: UUID):
         .eq("is_available", True) \
         .execute()
     
-    if not response.data:
-        return []
-    return response.data
+    return response.data if response.data else []
 
 @app.post("/orders", response_model=schemas.StandardResponse)
 async def place_order(order: schemas.OrderCreate):
@@ -50,18 +52,23 @@ async def place_order(order: schemas.OrderCreate):
         }
         
         res_order = supabase.table("orders").insert(order_data).execute()
+        
+        if not res_order.data:
+            raise Exception("Failed to create order record")
+            
         new_order_id = res_order.data[0]['id']
 
         # 2. Insert all items in that order
-        items_to_insert = []
-        for item in order.items:
-            items_to_insert.append({
+        items_to_insert = [
+            {
                 "order_id": new_order_id,
                 "product_id": str(item.product_id),
                 "quantity": item.quantity,
                 "customizations": item.customizations,
                 "price_at_time_of_sale": item.price_at_time_of_sale
-            })
+            }
+            for item in order.items
+        ]
         
         supabase.table("order_items").insert(items_to_insert).execute()
 
@@ -100,9 +107,14 @@ async def toggle_availability(product_id: UUID, update: schemas.AvailabilityUpda
 # --- 4. HEALTH CHECK ---
 @app.get("/")
 def home():
-    return {"status": "Kiosk API is Online", "version": "1.0.0"}
+    return {
+        "status": "Kiosk API is Online", 
+        "version": "1.0.0",
+        "environment": os.getenv("RAILWAY_ENVIRONMENT", "local")
+    }
 
 if __name__ == "__main__":
     import uvicorn
-    # Run the server on port 8000
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Port is dynamically assigned by Railway via environment variable
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
