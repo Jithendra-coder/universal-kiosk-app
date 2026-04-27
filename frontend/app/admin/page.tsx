@@ -20,7 +20,7 @@ const CURRENCIES = [
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
-  const [settings, setSettings] = useState<any>({ currency_symbol: '₹', store_name: 'Loading...' });
+  const [settings, setSettings] = useState<any>({ currency_symbol: '₹', store_name: 'Loading...', id: null });
 
   const refreshSettings = useCallback(async () => {
     const { data } = await supabase.from('restaurant_settings').select('*').limit(1).single();
@@ -172,7 +172,7 @@ function OrdersPage({ settings }: { settings: any }) {
     );
 }
 
-// --- 🍔 3. MENU PAGE (WITH CATEGORY ICONS & EDITING) ---
+// --- 🍔 3. MENU PAGE ---
 function MenuPage({ settings }: { settings: any }) {
     const [products, setProducts] = useState<any[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -214,16 +214,25 @@ function MenuPage({ settings }: { settings: any }) {
 
     const handleSave = async (e: any) => {
         e.preventDefault();
+        
+        // Ensure we only send columns that exist in Supabase
         const payload = { 
-            ...formData, 
+            name: formData.name,
             price: parseFloat(formData.price),
-            image_path: formData.image_path === "" ? null : formData.image_path 
+            category: formData.category,
+            item_type: formData.item_type,
+            image_path: formData.image_path === "" ? null : formData.image_path,
+            restaurant_id: settings.id // Mapping to your rest_id / restaurant_id column
         };
+
         if (editingId) {
-            await supabase.from('products').update(payload).eq('id', editingId);
+            const { error } = await supabase.from('products').update(payload).eq('id', editingId);
+            if (error) alert("Update Error: " + error.message);
         } else {
-            await supabase.from('products').insert([payload]);
+            const { error } = await supabase.from('products').insert([payload]);
+            if (error) alert("Insert Error: " + error.message);
         }
+
         setIsModalOpen(false);
         setEditingId(null);
         setFormData({ name: '', price: '', category: 'Main', item_type: 'Veg', image_path: '' });
