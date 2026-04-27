@@ -11,9 +11,9 @@ import schemas
 app = FastAPI(title="Universal Food Kiosk API")
 
 # --- 1. SECURITY & CORS ---
-# We pull the allowed origins from environment variables for security
-# If no variable is found, it defaults to localhost for development
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+# In production, ALLOWED_ORIGINS should be: http://localhost:3000,https://your-app.vercel.app
+raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+allowed_origins = [origin.strip() for origin in raw_origins.split(",")]
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,7 +23,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- 2. KIOSK ENDPOINTS (Customer Facing) ---
+# --- 2. ADMIN ENDPOINTS (The missing piece!) ---
+
+@app.post("/products", response_model=schemas.Product)
+async def create_product(product: schemas.ProductCreate):
+    """Adds a new item to the menu and saves it to Supabase."""
+    try:
+        # We convert the Pydantic model to a dict for Supabase
+        res = supabase.table("products").insert(product.dict()).execute()
+        
+        if not res.data:
+            raise Exception("Supabase insert failed")
+            
+        return res.data[0]
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not save product: {str(e)}")
+
+# --- 3. KIOSK ENDPOINTS (Customer Facing) ---
 
 @app.get("/menu/{restaurant_id}", response_model=List[schemas.Product])
 async def get_active_menu(restaurant_id: UUID):
@@ -38,10 +54,6 @@ async def get_active_menu(restaurant_id: UUID):
 
 @app.post("/orders", response_model=schemas.StandardResponse)
 async def place_order(order: schemas.OrderCreate):
-    """
-    Receives order from Kiosk, saves to DB.
-    This triggers the 'Realtime' listener on the Kitchen Screen!
-    """
     try:
         # 1. Insert the main order record
         order_data = {
@@ -52,7 +64,6 @@ async def place_order(order: schemas.OrderCreate):
         }
         
         res_order = supabase.table("orders").insert(order_data).execute()
-        
         if not res_order.data:
             raise Exception("Failed to create order record")
             
@@ -79,11 +90,10 @@ async def place_order(order: schemas.OrderCreate):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# --- 3. KITCHEN & ADMIN ENDPOINTS ---
+# --- 4. KITCHEN & ADMIN ENDPOINTS ---
 
 @app.patch("/orders/{order_id}/status")
 async def update_order_status(order_id: UUID, update: schemas.OrderStatusUpdate):
-    """Kitchen staff uses this to move order from 'Pending' to 'Ready'."""
     res = supabase.table("orders") \
         .update({"status": update.status}) \
         .eq("id", str(order_id)) \
@@ -96,7 +106,6 @@ async def update_order_status(order_id: UUID, update: schemas.OrderStatusUpdate)
 
 @app.patch("/products/{product_id}/availability")
 async def toggle_availability(product_id: UUID, update: schemas.AvailabilityUpdate):
-    """Kitchen staff uses this to 'Sold Out' an item instantly."""
     res = supabase.table("products") \
         .update({"is_available": update.is_available}) \
         .eq("id", str(product_id)) \
@@ -104,7 +113,7 @@ async def toggle_availability(product_id: UUID, update: schemas.AvailabilityUpda
     
     return {"status": "success", "is_available": update.is_available}
 
-# --- 4. HEALTH CHECK ---
+# --- 5. HEALTH CHECK ---
 @app.get("/")
 def home():
     return {
@@ -115,6 +124,5 @@ def home():
 
 if __name__ == "__main__":
     import uvicorn
-    # Port is dynamically assigned by Railway via environment variable
     port = int(os.getenv("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
