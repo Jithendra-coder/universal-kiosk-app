@@ -1,0 +1,8 @@
+export type KitchenQueuedEvent = { id: string; action: "start" | "hold" | "resume" | "ready" | "recall" | "item" | "availability"; orderId?: string; itemId?: string; productId?: string; payload: Record<string, unknown>; createdAt: string; retryCount: number; lastError?: string };
+const DB = "menutap-kitchen";
+const STORE = "events";
+
+function database(): Promise<IDBDatabase> { return new Promise((resolve, reject) => { const request = indexedDB.open(DB, 1); request.onupgradeneeded = () => request.result.createObjectStore(STORE, { keyPath: "id" }); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); }
+export async function queuedKitchenEvents(): Promise<KitchenQueuedEvent[]> { const db = await database(); return new Promise((resolve, reject) => { const request = db.transaction(STORE).objectStore(STORE).getAll(); request.onsuccess = () => resolve((request.result as KitchenQueuedEvent[]).sort((left, right) => left.createdAt.localeCompare(right.createdAt))); request.onerror = () => reject(request.error); }); }
+export async function saveKitchenEvent(event: KitchenQueuedEvent) { const db = await database(); await new Promise<void>((resolve, reject) => { const request = db.transaction(STORE, "readwrite").objectStore(STORE).put(event); request.onsuccess = () => resolve(); request.onerror = () => reject(request.error); }); }
+export async function removeKitchenEvent(id: string) { const db = await database(); await new Promise<void>((resolve, reject) => { const request = db.transaction(STORE, "readwrite").objectStore(STORE).delete(id); request.onsuccess = () => resolve(); request.onerror = () => reject(request.error); }); }

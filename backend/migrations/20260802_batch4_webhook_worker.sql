@@ -1,0 +1,11 @@
+alter table integration_webhooks add column if not exists signing_secret_ciphertext text;
+alter table integration_webhook_deliveries add column if not exists business_id uuid references businesses(id) on delete cascade;
+alter table integration_webhook_deliveries add column if not exists payload jsonb not null default '{}'::jsonb;
+alter table integration_webhook_deliveries add column if not exists status text not null default 'pending';
+alter table integration_webhook_deliveries add column if not exists last_attempted_at timestamptz;
+alter table integration_webhook_deliveries add column if not exists completed_at timestamptz;
+alter table integration_webhook_deliveries add column if not exists failed_at timestamptz;
+alter table integration_webhook_deliveries add column if not exists claimed_by text;
+alter table integration_webhook_deliveries add column if not exists claim_expires_at timestamptz;
+create unique index if not exists integration_webhook_event_once_idx on integration_webhook_deliveries(webhook_id,event_identifier);
+create index if not exists integration_webhook_delivery_queue_idx on integration_webhook_deliveries(status,next_retry_at,claim_expires_at);

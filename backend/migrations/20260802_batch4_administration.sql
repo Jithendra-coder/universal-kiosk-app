@@ -1,0 +1,22 @@
+-- Batch 4 reuses Batch 3's business_locations table rather than introducing a second location model.
+alter table business_locations add column if not exists address_line1 text;
+alter table business_locations add column if not exists city text;
+alter table business_locations add column if not exists state text;
+alter table business_locations add column if not exists postal_code text;
+alter table business_locations add column if not exists country text;
+alter table business_locations add column if not exists phone text;
+alter table business_locations add column if not exists timezone text;
+alter table business_locations add column if not exists currency_code text;
+alter table business_locations add column if not exists default_language text;
+alter table business_locations add column if not exists tax_region text;
+alter table business_locations add column if not exists operating_status text not null default 'open';
+alter table business_locations add column if not exists store_schedule jsonb not null default '{}'::jsonb;
+alter table business_locations add column if not exists ordering_settings jsonb not null default '{}'::jsonb;
+alter table business_locations add column if not exists receipt_settings jsonb not null default '{}'::jsonb;
+alter table business_locations add column if not exists created_by uuid references app_users(id) on delete set null;
+alter table business_locations add column if not exists updated_by uuid references app_users(id) on delete set null;
+alter table business_locations add column if not exists updated_at timestamptz not null default now();
+alter table business_locations drop constraint if exists business_locations_operating_status_check;
+alter table business_locations add constraint business_locations_operating_status_check check (operating_status in ('open', 'temporarily_closed', 'inactive'));
+create index if not exists business_locations_business_status_idx on business_locations(business_id, operating_status);
+create index if not exists audit_logs_business_created_idx on audit_logs(business_id, created_at desc);

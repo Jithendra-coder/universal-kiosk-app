@@ -1,6 +1,10 @@
 fastapi
 uvicorn
-supabase
+psycopg[binary]
+PyJWT
 python-dotenv
 pydantic
 pydantic-settings
+python-multipart
+qrcode[pil]
+redis

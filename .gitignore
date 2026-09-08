@@ -1,0 +1,41 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+venv/
+.venv/
+
+# Node / Next.js
+node_modules/
+.next/
+.codex-work/
+out/
+build/
+coverage/
+test-results/
+*.tsbuildinfo
+next-env.d.ts
+
+# Local uploads and runtime artifacts
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/email_outbox/
+qa-artifacts/
+frontend/qa-*.png
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
