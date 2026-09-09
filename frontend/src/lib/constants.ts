@@ -1,5 +1,4 @@
-import type { BusinessType, ItemType, KioskScreenOrientation } from "@/lib/types";
-import { supportedItemTypeOptions } from "@/lib/business-capabilities";
+import type { BusinessType, KioskScreenOrientation } from "@/lib/types";
 import {
   KIOSK_ACTION_BEHAVIORS,
   KIOSK_CARD_STYLES,
@@ -185,22 +184,4 @@ export function normalizeKioskScreenOrientation(value?: string | null): KioskScr
   return value === "portrait" ? "portrait" : "landscape";
 }
 
-export const currencies = [
-  { code: "INR", symbol: "Rs", label: "Indian Rupee" },
-  { code: "USD", symbol: "$", label: "US Dollar" },
-  { code: "EUR", symbol: "EUR", label: "Euro" },
-  { code: "GBP", symbol: "GBP", label: "British Pound" },
-  { code: "AED", symbol: "AED", label: "UAE Dirham" },
-  { code: "SGD", symbol: "S$", label: "Singapore Dollar" },
-  { code: "AUD", symbol: "A$", label: "Australian Dollar" },
-  { code: "CAD", symbol: "C$", label: "Canadian Dollar" },
-  { code: "JPY", symbol: "JPY", label: "Japanese Yen" },
-];
 
-export function businessTypeLabel(type: BusinessType) {
-  return businessTypes.find((item) => item.id === type)?.label ?? "Business";
-}
-
-export function itemTypeOptions(type: BusinessType): { id: ItemType; label: string }[] {
-  return supportedItemTypeOptions(type);
-}

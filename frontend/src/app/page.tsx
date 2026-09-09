@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import "./landing.css";
 import { initLandingEngine } from "./landing-engine.js";
 

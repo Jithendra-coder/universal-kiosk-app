@@ -99,16 +99,3 @@ export function mapProductToKioskCarouselItem(
   };
 }
 
-export function kioskProductSearchText(product: Product, categoryName?: string) {
-  const details = productDetails(product);
-  const detailText = Object.values(details)
-    .filter((value) => typeof value === "string" || typeof value === "number")
-    .join(" ");
-  const modifiers = (product.modifier_groups ?? [])
-    .flatMap((group) => [group.name, ...group.options.map((option) => option.name)])
-    .join(" ");
-  return [product.name, product.description, categoryName, detailText, modifiers]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-}

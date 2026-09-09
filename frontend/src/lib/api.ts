@@ -916,15 +916,4 @@ export function assetUrl(path?: string | null) {
   return `${apiRoot}/uploads/${path.replace(/^\/+/, "")}`;
 }
 
-export async function backendHealthCheck() {
-  const healthUrl =
-    API_BASE.startsWith("http://") || API_BASE.startsWith("https://")
-      ? `${API_BASE.replace(/\/api\/?$/, "")}/health`
-      : `${API_BASE.replace(/\/$/, "")}/health`;
-  const response = await fetch(healthUrl, {
-    cache: "no-store",
-    method: "GET",
-  });
-  return response.ok;
-}
 import { formatCurrency } from "@/lib/formatters";

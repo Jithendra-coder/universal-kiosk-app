@@ -4,19 +4,7 @@ export const DEFAULT_KIOSK_ACCENT = "#6D5DFB";
 export const KIOSK_MULTI_ACCENT = "multi";
 export const KIOSK_MULTI_ACCENT_FALLBACK = "#0F172A";
 
-export const KIOSK_ACCENT_PRESETS = [
-  { label: "Sky Blue", value: "#0284C7" },
-  { label: "Red", value: "#DC2626" },
-  { label: "Purple", value: "#7C3AED" },
-  { label: "Rose", value: "#E11D48" },
-  { label: "Indigo", value: "#4F46E5" },
-  { label: "Yellow", value: "#EAB308" },
-  { label: "Lime", value: "#65A30D" },
-  { label: "Pink", value: "#DB2777" },
-  { label: "Amber", value: "#D97706" },
-  { label: "Emerald", value: "#059669" },
-  { label: "Orange", value: "#EA580C" },
-] as const;
+
 
 export function normalizeKioskAccent(value?: string | null) {
   if (isKioskMultiAccent(value)) return KIOSK_MULTI_ACCENT;

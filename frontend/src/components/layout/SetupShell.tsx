@@ -1,6 +1,6 @@
 "use client";
 
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
 import { OnboardingTopBar } from "@/components/onboarding/OnboardingTopBar";
 
 export type SetupStep = 1 | 2 | 3 | 4 | 5 | 6;
@@ -72,9 +72,6 @@ export function SetupSelect(props: SelectHTMLAttributes<HTMLSelectElement>) {
   return <select {...props} className={`mt-setup-control ${props.className || ""}`.trim()} />;
 }
 
-export function SetupTextarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...props} className={`mt-setup-control mt-setup-control--textarea ${props.className || ""}`.trim()} />;
-}
 
 export function SetupSelectedBadge() {
   return <span className="mt-setup-selected"><i aria-hidden="true">✓</i>Selected</span>;

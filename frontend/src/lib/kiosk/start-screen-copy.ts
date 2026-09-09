@@ -77,15 +77,7 @@ export function splitPersistedText(value?: string | null) {
   return (value ?? "").split(/\r?\n/g);
 }
 
-export function joinPersistedText(lines: string[]) {
-  return cleanCustomTexts(lines).join("\n");
-}
 
-export function cleanStartScreenDraftValue(value: string | null | undefined, kind: "landing" | "instruction" | "subtitle") {
-  const legacyDefaults = kind === "landing" ? LEGACY_HEADLINE_DEFAULTS : kind === "instruction" ? LEGACY_INSTRUCTION_DEFAULTS : LEGACY_SUBTITLE_DEFAULTS;
-  const cleaned = cleanCustomTexts(splitPersistedText(value), legacyDefaults);
-  return kind === "subtitle" ? cleaned.join("\n") : (cleaned[0] ?? "");
-}
 
 function cleanCustomTexts(texts: string[], legacyDefaults?: Set<string>) {
   return texts

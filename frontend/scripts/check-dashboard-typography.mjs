@@ -13,7 +13,7 @@ const approvedLocalHeadings = new Set([
 const representativePages = [
   ["Home", "HomePage.tsx"], ["Sales & Orders", "BusinessInsightsPage.tsx"], ["Menu Performance", "BusinessInsightsPage.tsx"],
   ["Live Orders", "OperationsPage.tsx"], ["Devices", "OperationsPage.tsx"], ["Manage Menu", "ManageMenuPage.tsx"],
-  ["Promotions", "KioskExperiencePage.tsx"], ["Payments", "AdministrationPage.tsx"], ["Locations", "AdministrationPage.tsx"],
+  ["Promotions", "KioskExperiencePage.tsx"], ["Payments", "AdministrationModule.tsx"], ["Locations", "AdministrationModule.tsx"],
   ["Business Settings", "AdministrationModule.tsx"],
 ];
 

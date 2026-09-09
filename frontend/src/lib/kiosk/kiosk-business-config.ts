@@ -302,11 +302,6 @@ export function effectiveKioskCardStyle(type: BusinessType, style: KioskCardStyl
   return style === "auto" ? kioskBusinessConfig(type).defaultCardStyle : style;
 }
 
-export function effectiveKioskActionBehavior(type: BusinessType, behavior: KioskActionBehavior) {
-  const config = kioskBusinessConfig(type);
-  if (config.flowType === "booking") return "booking" as const;
-  return behavior === "auto" ? config.defaultActionBehavior : behavior;
-}
 
 export function isKioskActionBehaviorAllowed(type: BusinessType, behavior: KioskActionBehavior) {
   const config = kioskBusinessConfig(type);

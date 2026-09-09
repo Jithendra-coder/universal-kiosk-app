@@ -59,15 +59,7 @@ const keywordImages: Array<[string[], BusinessType, string]> = [
   [["notebook"], "other", "notebook.png"],
 ];
 
-export function isMenuTapStaticImage(path?: string | null) {
-  if (!path) return false;
-  return path.startsWith(`${MENUTAP_IMAGE_ROOT}/`) || path.startsWith("menutap-images/");
-}
 
-export function menutapBusinessPreviewImage(type: BusinessType) {
-  const folder = businessFolders[type] ?? businessFolders.other;
-  return `${MENUTAP_IMAGE_ROOT}/${folder}/${folder}_preview.png`;
-}
 
 export function menutapProductImage(product: Pick<Product, "name" | "item_type">) {
   const value = `${product.name} ${product.item_type}`.toLowerCase();
@@ -83,6 +75,3 @@ function imagePath(type: BusinessType, image: string) {
   return `${MENUTAP_IMAGE_ROOT}/${folder}/${image}`;
 }
 
-export function menutapImagePath(type: BusinessType, image: string) {
-  return imagePath(type, image);
-}
