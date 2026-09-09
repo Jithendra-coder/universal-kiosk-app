@@ -420,6 +420,15 @@ export const api = {
     const query = params.toString();
     return apiRequest<DashboardStats>(`/businesses/${businessId}/dashboard${query ? `?${query}` : ""}`);
   },
+  insights: (businessId: string, options: { start?: string; end?: string; locationId?: string | null; comparison?: string } = {}) => {
+    const params = new URLSearchParams();
+    if (options.start) params.set("start", apiDate(options.start, false));
+    if (options.end) params.set("end", apiDate(options.end, true));
+    if (options.locationId) params.set("location_id", options.locationId);
+    if (options.comparison) params.set("comparison", options.comparison);
+    const query = params.toString();
+    return apiRequest<Record<string, unknown>>(`/businesses/${businessId}/insights${query ? `?${query}` : ""}`);
+  },
   homeActivation: (businessId: string, locationId?: string | null) =>
     apiRequest<HomeActivation>(`/businesses/${businessId}/home-activation${locationId ? `?location_id=${encodeURIComponent(locationId)}` : ""}`),
   categories: (businessId: string) =>

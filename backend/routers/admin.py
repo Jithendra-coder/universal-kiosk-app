@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from database import DbClient, get_db_client
 from deps import require_user_id
 from schemas import DashboardStats, HomeActivation
-from services import alert_service, analytics_service, auth_service, business_service, setup_service
+from services import alert_service, analytics_service, auth_service, business_service, insights_service, setup_service
 from services.business_service import ADMIN_ROLES, assert_business_access
 
 router = APIRouter(prefix="/businesses/{business_id}", tags=["admin"])
@@ -73,3 +73,25 @@ def analytics(
 ):
     assert_business_access(client, business_id, user_id, ADMIN_ROLES)
     return analytics_service.dashboard_stats(client, business_id, start=start, end=end, location_id=location_id)
+
+
+@router.get("/insights")
+def insights(
+    business_id: UUID,
+    start: datetime | None = None,
+    end: datetime | None = None,
+    location_id: UUID | None = None,
+    comparison: str = "previous",
+    user_id: UUID = Depends(require_user_id),
+    client: DbClient = Depends(get_db_client),
+):
+    assert_business_access(client, business_id, user_id, ADMIN_ROLES)
+    return insights_service.compute_comprehensive_insights(
+        client,
+        business_id,
+        start=start,
+        end=end,
+        location_id=location_id,
+        comparison=comparison,
+    )
+

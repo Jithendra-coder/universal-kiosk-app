@@ -59,39 +59,52 @@ function Insights({ mode }: { mode: Mode }) {
 }
 
 async function loadInsightsData(businessId: string, reporting: Pick<Reporting, "start" | "end" | "locationId" | "comparison">, mode: Mode, fullAnalytics: boolean) {
-  const needsPrevious = mode === "sales-reports" && reporting.comparison === "previous";
-  const needsOrders = mode !== "menu-performance";
   const needsMenu = mode === "menu-performance";
-  const previous = previousRange(reporting.start, reporting.end);
-  const [statsResult, previousResult, ordersResult, productsResult, categoriesResult, devicesResult, paymentsResult] = await Promise.allSettled([
-    api.dashboard(businessId, reporting),
-    needsPrevious ? api.dashboard(businessId, { ...previous, locationId: reporting.locationId }) : Promise.resolve(null),
-    needsOrders ? api.orders(businessId, { start: reporting.start, end: reporting.end, locationId: reporting.locationId, limit: 250 }) : Promise.resolve({ orders: [] as Order[] }),
-    needsMenu ? api.products(businessId) : Promise.resolve({ products: [] as Product[] }),
-    needsMenu ? api.categories(businessId) : Promise.resolve({ categories: [] as Category[] }),
-    fullAnalytics ? api.devices(businessId) : Promise.resolve({ devices: [] as DeviceRecord[] }),
-    fullAnalytics ? api.payments(businessId) : Promise.resolve(null),
-  ] as const);
-  if (statsResult.status === "rejected") throw statsResult.reason instanceof Error ? statsResult.reason : new Error("Couldn't load Insights.");
-  const errors: Record<string, string> = {};
-  if (needsPrevious && previousResult.status === "rejected") errors.previous = "Couldn't load the previous period.";
-  if (needsOrders && ordersResult.status === "rejected") errors.orders = "Couldn't load orders.";
-  if (needsMenu && productsResult.status === "rejected") errors.products = "Couldn't load menu performance.";
-  if (needsMenu && categoriesResult.status === "rejected") errors.categories = "Couldn't load category performance.";
-  if (fullAnalytics && devicesResult.status === "rejected") errors.devices = "Couldn't load device performance.";
-  if (fullAnalytics && paymentsResult.status === "rejected") errors.payments = "Couldn't load payment analytics.";
-  return {
-    errors,
-    data: {
-      stats: statsResult.value,
-      previous: previousResult.status === "fulfilled" ? previousResult.value : null,
-      orders: ordersResult.status === "fulfilled" ? ordersResult.value.orders : [],
-      products: productsResult.status === "fulfilled" ? productsResult.value.products : [],
-      categories: categoriesResult.status === "fulfilled" ? categoriesResult.value.categories : [],
-      devices: devicesResult.status === "fulfilled" ? devicesResult.value.devices : null,
-      payments: paymentsResult.status === "fulfilled" ? paymentsResult.value : null,
-    } satisfies Data,
-  };
+  try {
+    const [insightsResult, productsResult, categoriesResult, devicesResult, paymentsResult] = await Promise.allSettled([
+      api.insights(businessId, reporting),
+      needsMenu ? api.products(businessId) : Promise.resolve({ products: [] as Product[] }),
+      needsMenu ? api.categories(businessId) : Promise.resolve({ categories: [] as Category[] }),
+      fullAnalytics ? api.devices(businessId) : Promise.resolve({ devices: [] as DeviceRecord[] }),
+      fullAnalytics ? api.payments(businessId) : Promise.resolve(null),
+    ] as const);
+
+    if (insightsResult.status === "rejected") {
+      const fallback = await api.dashboard(businessId, reporting);
+      return {
+        errors: {},
+        data: {
+          stats: fallback,
+          previous: null,
+          orders: [],
+          products: [],
+          categories: [],
+          devices: null,
+          payments: null,
+        } satisfies Data,
+      };
+    }
+
+    const payload = insightsResult.value as Record<string, unknown>;
+    const stats = (payload.stats || {}) as DashboardStats;
+    const previous = (payload.previous || null) as DashboardStats | null;
+    const orders = (payload.recent_orders || []) as Order[];
+
+    return {
+      errors: {},
+      data: {
+        stats,
+        previous,
+        orders,
+        products: productsResult.status === "fulfilled" ? productsResult.value.products : [],
+        categories: categoriesResult.status === "fulfilled" ? categoriesResult.value.categories : [],
+        devices: devicesResult.status === "fulfilled" ? devicesResult.value.devices : null,
+        payments: paymentsResult.status === "fulfilled" ? paymentsResult.value : null,
+      } satisfies Data,
+    };
+  } catch (cause) {
+    throw cause instanceof Error ? cause : new Error("Couldn't load Insights.");
+  }
 }
 
 function SalesOrdersLocked({ data, locations, reporting, onChange, errors, retry }: Props) {
@@ -133,6 +146,5 @@ function titleFor(mode: Mode) { return mode === "sales-reports" ? "Sales & Order
 function subtitleFor(mode: Mode) { return mode === "sales-reports" ? "Understand sales and order activity for your business." : mode === "menu-performance" ? "Understand what's driving menu sales and where attention is needed." : mode === "reports" ? "Create, save and export structured business reports." : "Understand how demand and business patterns change over time."; }
 function useReporting(params: ReturnType<typeof useSearchParams>): Reporting { const preset = params.get("preset") === "today" || params.get("preset") === "30d" ? params.get("preset") as Reporting["preset"] : "7d"; const range = rangeFor(preset); return { preset, start: params.get("start") || range.start, end: params.get("end") || range.end, comparison: params.get("comparison") === "none" ? "none" : "previous", locationId: params.get("location_id") }; }
 function rangeFor(preset: Reporting["preset"]) { const end = isoDate(0); return preset === "today" ? { start: end, end } : preset === "30d" ? { start: isoDate(-29), end } : { start: isoDate(-6), end }; }
-function previousRange(start: string, end: string) { const from = new Date(`${start}T00:00:00Z`); const to = new Date(`${end}T00:00:00Z`); const days = Math.max(1, Math.round((to.getTime() - from.getTime()) / 86400000) + 1); const previousEnd = new Date(from); previousEnd.setUTCDate(previousEnd.getUTCDate() - 1); const previousStart = new Date(previousEnd); previousStart.setUTCDate(previousStart.getUTCDate() - days + 1); return { start: previousStart.toISOString().slice(0, 10), end: previousEnd.toISOString().slice(0, 10) }; }
 function isoDate(offset: number) { const date = new Date(); date.setDate(date.getDate() + offset); return date.toISOString().slice(0, 10); }
 function periodLabel(reporting: Reporting) { return reporting.preset === "today" ? "Today" : reporting.preset === "30d" ? "Last 30 days" : "Last 7 days"; }
