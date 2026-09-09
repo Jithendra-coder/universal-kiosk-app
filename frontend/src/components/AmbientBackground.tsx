@@ -17,16 +17,11 @@ type Particle = {
 };
 
 const palette = [
-  { r: 11, g: 87, b: 240 },
-  { r: 11, g: 87, b: 240 },
-  { r: 47, g: 128, b: 237 },
-  { r: 47, g: 128, b: 237 },
-  { r: 47, g: 128, b: 237 },
-  { r: 168, g: 224, b: 0 },
-  { r: 168, g: 224, b: 0 },
-  { r: 200, g: 243, b: 106 },
-  { r: 143, g: 179, b: 255 },
-  { r: 201, g: 218, b: 255 },
+  { r: 0, g: 0, b: 0 },
+  { r: 104, g: 114, b: 128 },
+  { r: 161, g: 161, b: 170 },
+  { r: 75, g: 85, b: 99 },
+  { r: 24, g: 24, b: 27 },
 ];
 
 function seededRandom(a: number, b: number, c: number, d: number) {
@@ -133,12 +128,11 @@ export function AmbientBackground() {
             const second = connectable[right];
             const distance = Math.hypot(first.x - second.x, first.y - second.y);
             if (distance >= 145) continue;
-            const lime = first.color.r > 150 && second.color.r > 150;
-            const alpha = (1 - distance / 145) * 0.06 * (lime ? 0.75 : 1);
+            const alpha = (1 - distance / 145) * 0.045;
             context.beginPath();
             context.moveTo(first.x, first.y);
             context.lineTo(second.x, second.y);
-            context.strokeStyle = lime ? `rgb(168 224 0 / ${alpha})` : `rgb(47 128 237 / ${alpha})`;
+            context.strokeStyle = `rgb(104 114 128 / ${alpha})`;
             context.lineWidth = 0.6;
             context.stroke();
             links += 1;
@@ -216,7 +210,7 @@ export function AmbientBackground() {
   }, []);
 
   return (
-    <div className="mt-ambient" data-component="menutap-ambient-background" aria-hidden="true">
+    <div className="mt-ambient mt-bg-dots" data-component="noir-ambient-background" aria-hidden="true">
       <canvas ref={canvasRef} className="mt-ambient__canvas" />
       <div className="mt-ambient__atmosphere" />
     </div>

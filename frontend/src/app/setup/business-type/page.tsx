@@ -81,7 +81,7 @@ export default function BusinessTypePage() {
           <section className="mt-business-type-card" aria-labelledby="business-type-title">
             <div className="mt-business-type-card__icon" aria-hidden="true">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                <path d="M3 9l1-4a3 3 0 0 1 3-2h10a3 3 0 0 1 3 2l1 4M3 9h18M4 9l1 10h14l1-10M8 19v-5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v5" stroke="#1570ef" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M3 9l1-4a3 3 0 0 1 3-2h10a3 3 0 0 1 3 2l1 4M3 9h18M4 9l1 10h14l1-10M8 19v-5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v5" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
             <div className="mt-business-type-heading">

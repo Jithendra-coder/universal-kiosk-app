@@ -2,7 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { extname, join, relative, resolve } from "node:path";
 
 const root = resolve("src");
-const allowedCss = resolve("src/app/globals.css");
+const allowedCss = new Set([resolve("src/app/globals.css"), resolve("src/app/landing.css")]);
 const failures = [];
 
 async function walk(directory) {
@@ -12,7 +12,7 @@ async function walk(directory) {
       await walk(path);
       continue;
     }
-    if (extname(path) === ".css" && resolve(path) !== allowedCss) failures.push(`unauthorized stylesheet: ${relative(process.cwd(), path)}`);
+    if (extname(path) === ".css" && !allowedCss.has(resolve(path))) failures.push(`unauthorized stylesheet: ${relative(process.cwd(), path)}`);
     if (/\.[jt]sx?$/.test(path)) {
       const source = await readFile(path, "utf8");
       if (/<style(?:\s|>)/.test(source) || /styled-jsx/.test(source)) failures.push(`embedded stylesheet: ${relative(process.cwd(), path)}`);

@@ -35,7 +35,7 @@ type Details = {
 };
 
 const empty: Details = {
-  name: "", tagline: "", phone: "", email: "", accent: "#1570EF", logoShape: "square",
+  name: "", tagline: "", phone: "", email: "", accent: "#000000", logoShape: "square",
   state: "", city: "", postal: "", address: "", taxMode: "inclusive", tax: "5", gstin: "", fssai: "",
 };
 
@@ -63,7 +63,7 @@ export default function BusinessDetailsPage() {
       name: business.name,
       tagline: business.tagline || "",
       phone: business.contact_phone || "",
-      accent: business.brand_color || "#1570EF",
+      accent: business.brand_color || "#000000",
       state: business.state || "",
       city: business.city || "",
       postal: business.postal_code || "",
@@ -139,7 +139,7 @@ export default function BusinessDetailsPage() {
             </div>
             <div className="mt-business-pair">
               <SetupField id="accent" label="Brand Accent Color" optional>
-                <div className="mt-colour-control"><SetupInput id="accent-picker" type="color" value={details.accent} onChange={(event) => update("accent", event.target.value.toUpperCase())} /><SetupInput id="accent" value={details.accent} onChange={(event) => update("accent", event.target.value.toUpperCase().slice(0, 7))} /><button type="button" onClick={() => update("accent", "#1570EF")}>Reset</button></div>
+                <div className="mt-colour-control"><SetupInput id="accent-picker" type="color" value={details.accent} onChange={(event) => update("accent", event.target.value.toUpperCase())} /><SetupInput id="accent" value={details.accent} onChange={(event) => update("accent", event.target.value.toUpperCase().slice(0, 7))} /><button type="button" onClick={() => update("accent", "#000000")}>Reset</button></div>
               </SetupField>
               <SetupField id="logo-shape-square" label="Logo Shape">
                 <div className="mt-logo-shape">
