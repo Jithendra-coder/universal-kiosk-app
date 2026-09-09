@@ -1,0 +1,14 @@
+# GitHub Linguist language overrides
+# Establishes Python as the primary language of the repository
+
+# Exclude frontend UI templates, presentation views, and design system components from language stats
+frontend/src/app/** linguist-detectable=false
+frontend/src/components/** linguist-detectable=false
+frontend/tests/** linguist-vendored
+frontend/scripts/** linguist-documentation
+frontend/public/** linguist-vendored
+
+# Ensure Python services and backend architecture are fully detected
+backend/** linguist-detectable=true
+backend/services/** linguist-detectable=true
+backend/routers/** linguist-detectable=true
