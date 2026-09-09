@@ -63,192 +63,81 @@ export const KIOSK_ACTION_BEHAVIORS: KioskActionBehavior[] = [
   "booking",
 ];
 
-const foodBase = {
+const foodBase: Omit<KioskBusinessConfig, "type"> = {
   allowedLayouts: KIOSK_LAYOUT_IDS,
-  flowType: "cart" as const,
-  itemNoun: "item" as const,
+  flowType: "cart",
+  itemNoun: "item",
   itemNounPlural: "items",
   startLabel: "Start Your Order",
   secondaryStartLabel: "View Menu",
   checkoutLabel: "Checkout",
   emptyLabel: "No items found",
+  showPrepTime: true,
+  showDietaryType: true,
   showStock: false,
   showUnit: false,
   showBrand: false,
   showDuration: false,
   showVariants: true,
   showAddons: true,
-  defaultCategoryStyle: "simple_button" as const,
-  defaultProductDisplayStyle: "detailed_card" as const,
+  showCombos: true,
+  defaultLayout: "top_category",
+  defaultCardStyle: "detailed",
+  defaultCategoryStyle: "simple_button",
+  defaultProductDisplayStyle: "detailed_card",
+  defaultActionBehavior: "direct_add",
 };
 
-const configs: Record<BusinessType, KioskBusinessConfig> = {
-  restaurant: {
-    ...foodBase,
-    type: "restaurant",
-    defaultLayout: "top_category",
-    showPrepTime: true,
-    showDietaryType: true,
-    showCombos: true,
-    defaultCardStyle: "detailed",
-    defaultActionBehavior: "direct_add",
-  },
-  cafe: {
-    ...foodBase,
-    type: "cafe",
-    defaultLayout: "top_category",
-    showPrepTime: true,
-    showDietaryType: true,
-    showCombos: true,
-    defaultCardStyle: "compact",
-    defaultActionBehavior: "direct_add",
-  },
-  pizza: {
-    ...foodBase,
-    type: "pizza",
-    defaultLayout: "top_category",
-    showPrepTime: true,
-    showDietaryType: true,
-    showCombos: true,
-    defaultCardStyle: "detailed",
-    defaultActionBehavior: "customize_first",
-  },
-  burger: {
-    ...foodBase,
-    type: "burger",
-    defaultLayout: "top_category",
-    showPrepTime: true,
-    showDietaryType: true,
-    showCombos: true,
-    defaultCardStyle: "detailed",
-    defaultActionBehavior: "customize_first",
-  },
-  bakery: {
-    ...foodBase,
-    type: "bakery",
-    defaultLayout: "category_gate",
-    showPrepTime: false,
-    showDietaryType: true,
-    showStock: true,
-    showUnit: true,
-    showCombos: true,
-    defaultCardStyle: "image_focused",
-    defaultActionBehavior: "direct_add",
-  },
-  ice_cream: {
-    ...foodBase,
-    type: "ice_cream",
-    defaultLayout: "top_category",
-    showPrepTime: false,
-    showDietaryType: true,
-    showCombos: true,
-    defaultCardStyle: "image_focused",
-    defaultActionBehavior: "customize_first",
-  },
+const overrides: Partial<Record<BusinessType, Partial<KioskBusinessConfig>>> = {
+  cafe: { defaultCardStyle: "compact" },
+  pizza: { defaultActionBehavior: "customize_first" },
+  burger: { defaultActionBehavior: "customize_first" },
+  bakery: { defaultLayout: "category_gate", showPrepTime: false, showStock: true, showUnit: true, defaultCardStyle: "image_focused" },
+  ice_cream: { showPrepTime: false, defaultCardStyle: "image_focused", defaultActionBehavior: "customize_first" },
   grocery: {
-    type: "grocery",
-    allowedLayouts: KIOSK_LAYOUT_IDS,
-    defaultLayout: "category_gate",
-    flowType: "cart",
-    itemNoun: "product",
-    itemNounPlural: "products",
-    startLabel: "Start Shopping",
-    secondaryStartLabel: "Browse Products",
-    checkoutLabel: "Checkout",
-    emptyLabel: "No products found",
-    showPrepTime: false,
-    showDietaryType: false,
-    showStock: true,
-    showUnit: true,
-    showBrand: true,
-    showDuration: false,
-    showVariants: true,
-    showAddons: false,
-    showCombos: false,
-    defaultCardStyle: "compact",
-    defaultCategoryStyle: "simple_button",
-    defaultProductDisplayStyle: "detailed_card",
-    defaultActionBehavior: "quantity_stepper",
+    defaultLayout: "category_gate", itemNoun: "product", itemNounPlural: "products", startLabel: "Start Shopping",
+    secondaryStartLabel: "Browse Products", showPrepTime: false, showDietaryType: false, showStock: true, showUnit: true,
+    showBrand: true, showAddons: false, showCombos: false, defaultCardStyle: "compact", defaultActionBehavior: "quantity_stepper",
   },
   retail: {
-    type: "retail",
-    allowedLayouts: KIOSK_LAYOUT_IDS,
-    defaultLayout: "category_gate",
-    flowType: "cart",
-    itemNoun: "product",
-    itemNounPlural: "products",
-    startLabel: "Start Shopping",
-    secondaryStartLabel: "Browse Products",
-    checkoutLabel: "Checkout",
-    emptyLabel: "No products found",
-    showPrepTime: false,
-    showDietaryType: false,
-    showStock: true,
-    showUnit: false,
-    showBrand: true,
-    showDuration: false,
-    showVariants: true,
-    showAddons: false,
-    showCombos: false,
-    defaultCardStyle: "compact",
-    defaultCategoryStyle: "simple_button",
-    defaultProductDisplayStyle: "detailed_card",
-    defaultActionBehavior: "quantity_stepper",
+    defaultLayout: "category_gate", itemNoun: "product", itemNounPlural: "products", startLabel: "Start Shopping",
+    secondaryStartLabel: "Browse Products", showPrepTime: false, showDietaryType: false, showStock: true,
+    showBrand: true, showAddons: false, showCombos: false, defaultCardStyle: "compact", defaultActionBehavior: "quantity_stepper",
   },
   salon: {
-    type: "salon",
-    allowedLayouts: KIOSK_LAYOUT_IDS,
-    defaultLayout: "category_gate",
-    flowType: "booking",
-    itemNoun: "service",
-    itemNounPlural: "services",
-    startLabel: "Book a Service",
-    secondaryStartLabel: "Browse Services",
-    checkoutLabel: "Confirm Booking",
-    emptyLabel: "No services found",
-    showPrepTime: false,
-    showDietaryType: false,
-    showStock: false,
-    showUnit: false,
-    showBrand: false,
-    showDuration: true,
-    showVariants: true,
-    showAddons: true,
-    showCombos: true,
-    defaultCardStyle: "detailed",
-    defaultCategoryStyle: "simple_button",
-    defaultProductDisplayStyle: "detailed_card",
-    defaultActionBehavior: "booking",
+    defaultLayout: "category_gate", flowType: "booking", itemNoun: "service", itemNounPlural: "services",
+    startLabel: "Book a Service", secondaryStartLabel: "Browse Services", checkoutLabel: "Confirm Booking",
+    emptyLabel: "No services found", showPrepTime: false, showDietaryType: false, showDuration: true, defaultActionBehavior: "booking",
   },
-  other: {
-    type: "other",
-    allowedLayouts: KIOSK_LAYOUT_IDS,
-    defaultLayout: "top_category",
-    flowType: "cart",
-    itemNoun: "item",
-    itemNounPlural: "items",
-    startLabel: "Get Started",
-    secondaryStartLabel: "Browse Items",
-    checkoutLabel: "Continue",
-    emptyLabel: "No items found",
-    showPrepTime: false,
-    showDietaryType: false,
-    showStock: false,
-    showUnit: false,
-    showBrand: false,
-    showDuration: false,
-    showVariants: true,
-    showAddons: true,
-    showCombos: false,
-    defaultCardStyle: "compact",
-    defaultCategoryStyle: "simple_button",
-    defaultProductDisplayStyle: "detailed_card",
-    defaultActionBehavior: "direct_add",
-  },
+  other: { showPrepTime: false, showDietaryType: false, showCombos: false, defaultCardStyle: "compact" },
 };
 
-export function kioskBusinessConfig(type?: BusinessType | null) {
-  return configs[type ?? "other"] ?? configs.other;
+const configCache = new Map<string, KioskBusinessConfig>();
+
+export async function fetchServerKioskConfig(type: BusinessType): Promise<{ config: KioskBusinessConfig; displaySettings: KioskDisplaySettings } | null> {
+  try {
+    const res = await fetch(`/api/kiosk/config/${type}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.config) {
+        configCache.set(type, data.config);
+      }
+      return data;
+    }
+  } catch {}
+  return null;
+}
+
+export function kioskBusinessConfig(type?: BusinessType | null): KioskBusinessConfig {
+  const key = type ?? "other";
+  if (configCache.has(key)) return configCache.get(key)!;
+  const resolved: KioskBusinessConfig = {
+    ...foodBase,
+    ...(overrides[key] || {}),
+    type: key,
+  };
+  configCache.set(key, resolved);
+  return resolved;
 }
 
 export function resolveKioskDisplaySettings(
@@ -301,7 +190,6 @@ export function resolveKioskDisplaySettings(
 export function effectiveKioskCardStyle(type: BusinessType, style: KioskCardStyle) {
   return style === "auto" ? kioskBusinessConfig(type).defaultCardStyle : style;
 }
-
 
 export function isKioskActionBehaviorAllowed(type: BusinessType, behavior: KioskActionBehavior) {
   const config = kioskBusinessConfig(type);

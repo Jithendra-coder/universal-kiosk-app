@@ -19,14 +19,22 @@ export type StoreAvailability = {
 };
 
 const DAY_INDEX: Record<string, StoreDayKey> = {
-  Mon: "monday",
-  Tue: "tuesday",
-  Wed: "wednesday",
-  Thu: "thursday",
-  Fri: "friday",
-  Sat: "saturday",
-  Sun: "sunday",
+  Mon: "monday", Tue: "tuesday", Wed: "wednesday", Thu: "thursday", Fri: "friday", Sat: "saturday", Sun: "sunday",
 };
+
+const operatingStatusCache = new Map<string, StoreAvailability>();
+
+export async function fetchServerOperatingStatus(businessId: string): Promise<StoreAvailability | null> {
+  try {
+    const res = await fetch(`/api/businesses/${businessId}/operating-status`);
+    if (res.ok) {
+      const data: StoreAvailability = await res.json();
+      operatingStatusCache.set(businessId, data);
+      return data;
+    }
+  } catch {}
+  return null;
+}
 
 export function normalizeStoreSchedule(business: Pick<Business, "opening_time" | "closing_time" | "store_schedule">): NormalizedStoreSchedule {
   const opening = business.opening_time?.slice(0, 5) || "09:00";
@@ -35,46 +43,30 @@ export function normalizeStoreSchedule(business: Pick<Business, "opening_time" |
   const weekly = Object.fromEntries(
     STORE_DAY_KEYS.map((day) => {
       const saved = source.weekly?.[day];
-      return [
-        day,
-        {
-          closed: saved?.closed ?? false,
-          slots: normalizeSlots(saved?.slots, opening, closing),
-        },
-      ];
+      return [day, { closed: saved?.closed ?? false, slots: normalizeSlots(saved?.slots, opening, closing) }];
     })
   ) as Record<StoreDayKey, StoreDaySchedule>;
 
   return {
     enabled: source.enabled ?? true,
     weekly,
-    overrides: (source.overrides ?? []).map((override) => ({
-      ...override,
-      slots: normalizeSlots(override.slots, opening, closing),
-    })),
+    overrides: (source.overrides ?? []).map((override) => ({ ...override, slots: normalizeSlots(override.slots, opening, closing) })),
     emergency_closed: source.emergency_closed ?? false,
     emergency_message: source.emergency_message?.trim() || "We are temporarily unavailable. Please check back shortly.",
   };
 }
 
 export function getStoreAvailability(business: Business, now = new Date()): StoreAvailability {
+  if (business?.id && operatingStatusCache.has(business.id)) {
+    return operatingStatusCache.get(business.id)!;
+  }
   if (!business.is_active) {
-    return {
-      isOpen: false,
-      title: "Orders are paused",
-      message: "This location is not accepting new orders right now.",
-      shortMessage: "Not accepting orders",
-    };
+    return { isOpen: false, title: "Orders are paused", message: "This location is not accepting new orders right now.", shortMessage: "Not accepting orders" };
   }
 
   const schedule = normalizeStoreSchedule(business);
   if (schedule.emergency_closed) {
-    return {
-      isOpen: false,
-      title: "Temporarily unavailable",
-      message: schedule.emergency_message,
-      shortMessage: "Temporarily unavailable",
-    };
+    return { isOpen: false, title: "Temporarily unavailable", message: schedule.emergency_message, shortMessage: "Temporarily unavailable" };
   }
 
   const clock = zonedClock(now, business.timezone || "Asia/Kolkata");
@@ -93,21 +85,14 @@ export function getStoreAvailability(business: Business, now = new Date()): Stor
 
   const activeSlot = daySchedule.slots.find((slot) => isWithinSlot(clock.minutes, slot));
   if (activeSlot) {
-    return {
-      isOpen: true,
-      title: "Open now",
-      message: `Open until ${formatClock(activeSlot.close)}.`,
-      shortMessage: `Open until ${formatClock(activeSlot.close)}`,
-    };
+    return { isOpen: true, title: "Open now", message: `Open until ${formatClock(activeSlot.close)}.`, shortMessage: `Open until ${formatClock(activeSlot.close)}` };
   }
 
   const nextToday = daySchedule.slots.find((slot) => clock.minutes < toMinutes(slot.open));
   return {
     isOpen: false,
     title: "Store closed",
-    message: nextToday
-      ? `Ordering opens today at ${formatClock(nextToday.open)}.`
-      : nextOpeningMessage(schedule, clock.day),
+    message: nextToday ? `Ordering opens today at ${formatClock(nextToday.open)}.` : nextOpeningMessage(schedule, clock.day),
     shortMessage: nextToday ? `Opens at ${formatClock(nextToday.open)}` : "Closed",
   };
 }
@@ -129,13 +114,10 @@ function zonedClock(now: Date, timezone: string) {
     hourCycle: "h23",
   }).formatToParts(now);
   const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
-  const day = DAY_INDEX[value("weekday")] ?? "monday";
-  const hour = Number(value("hour") || 0);
-  const minute = Number(value("minute") || 0);
   return {
-    day,
+    day: DAY_INDEX[value("weekday")] ?? "monday",
     date: `${value("year")}-${value("month")}-${value("day")}`,
-    minutes: hour * 60 + minute,
+    minutes: Number(value("hour") || 0) * 60 + Number(value("minute") || 0),
   };
 }
 
@@ -144,8 +126,7 @@ function legacyAvailability(business: Business, minutes: number): StoreAvailabil
     return { isOpen: true, title: "Open now", message: "Ready for orders.", shortMessage: "Ready for orders" };
   }
   const slot = { open: business.opening_time.slice(0, 5), close: business.closing_time.slice(0, 5) };
-  const isOpen = isWithinSlot(minutes, slot);
-  return isOpen
+  return isWithinSlot(minutes, slot)
     ? { isOpen: true, title: "Open now", message: `Open until ${formatClock(slot.close)}.`, shortMessage: `Open until ${formatClock(slot.close)}` }
     : { isOpen: false, title: "Store closed", message: `Ordering opens at ${formatClock(slot.open)}.`, shortMessage: `Opens at ${formatClock(slot.open)}` };
 }
@@ -153,8 +134,7 @@ function legacyAvailability(business: Business, minutes: number): StoreAvailabil
 function isWithinSlot(minutes: number, slot: StoreTimeSlot) {
   const open = toMinutes(slot.open);
   const close = toMinutes(slot.close);
-  if (open === close) return true;
-  return open < close ? minutes >= open && minutes < close : minutes >= open || minutes < close;
+  return open === close ? true : open < close ? minutes >= open && minutes < close : minutes >= open || minutes < close;
 }
 
 function nextOpeningMessage(schedule: NormalizedStoreSchedule, currentDay: StoreDayKey) {
@@ -163,8 +143,7 @@ function nextOpeningMessage(schedule: NormalizedStoreSchedule, currentDay: Store
     const day = STORE_DAY_KEYS[(start + offset) % STORE_DAY_KEYS.length];
     const entry = schedule.weekly[day];
     if (!entry.closed && entry.slots[0]) {
-      const label = day.charAt(0).toUpperCase() + day.slice(1);
-      return `Ordering opens ${label} at ${formatClock(entry.slots[0].open)}.`;
+      return `Ordering opens ${day.charAt(0).toUpperCase() + day.slice(1)} at ${formatClock(entry.slots[0].open)}.`;
     }
   }
   return "This location is not accepting new orders right now.";

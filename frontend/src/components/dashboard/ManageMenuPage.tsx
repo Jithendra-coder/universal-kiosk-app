@@ -24,7 +24,24 @@ export const itemAttentionIssues = (item: Product) => [!item.category_id && "Mis
 export const formatMenuPrice = (value: number | string | null | undefined, currency = "INR") => formatCurrency(Number(value ?? 0), currency);
 export const filterMenuProducts = (products: Product[], search: string, category: string, status: string, dietary: string, scope: MenuScope = "all") => products.filter((item) => (!search || `${item.name} ${item.sku || ""}`.toLowerCase().includes(search)) && (category === "all" || item.category_id === category) && (status === "all" || item.menu_status === status) && (dietary === "all" || item.item_type === dietary) && (scope === "all" || scope === "available" && isProductAvailable(item) || scope === "unavailable" && !isProductAvailable(item) || scope === "attention" && itemAttentionIssues(item).length > 0));
 
-function exportProducts(products: Product[], currency: string) {
+async function exportProducts(products: Product[], currency: string, businessId?: string) {
+  if (businessId && products.length > 0) {
+    try {
+      const res = await fetch(`/api/businesses/${businessId}/products/export`, { credentials: "include" });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `menu-items-${businessId}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+        return;
+      }
+    } catch {
+      // Fallback to client generation
+    }
+  }
   const quote = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
   const csv = [["Name", "SKU", "Price", "Currency", "Category ID", "Dietary", "Available", "Status"], ...products.map((item) => [item.name, item.sku || "", item.price, currency, item.category_id || "", item.item_type, item.is_available, item.menu_status || "draft"])].map((row) => row.map(quote).join(",")).join("\r\n");
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
@@ -180,7 +197,7 @@ function ItemsMode({ business, products, categories, combos, initialProductId, p
 
   return <div className="mt-menu-content">
     <div className="mt-menu-toolbar">
-      <div className="mt-menu-toolbar__filters"><SearchInput label="Search menu items" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search items or SKU" /><label><span className="mt-sr-only">Category</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="all">All categories</option>{categoryRows.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}</select></label><label><span className="mt-sr-only">Status</span><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="all">All statuses</option><option value="shown">Published</option><option value="draft">Draft</option><option value="hidden">Archived</option><option value="unavailable">Unavailable</option></select></label><label><span className="mt-sr-only">Dietary</span><select value={dietary} onChange={(event) => setDietary(event.target.value)}><option value="all">All dietary</option><option value="veg">Vegetarian</option><option value="non_veg">Non-vegetarian</option><option value="retail">Retail</option><option value="service">Service</option><option value="other">Other</option></select></label><details className="mt-menu-more"><summary><MoreHorizontal size={18} /> More Filters</summary><div><button type="button" onClick={() => exportProducts(rows, business.currency_code || "")}><Download size={15} /> Export menu</button><Link href="/dashboard/kiosk-experience/availability">Detailed availability</Link></div></details></div>
+      <div className="mt-menu-toolbar__filters"><SearchInput label="Search menu items" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search items or SKU" /><label><span className="mt-sr-only">Category</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="all">All categories</option>{categoryRows.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}</select></label><label><span className="mt-sr-only">Status</span><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="all">All statuses</option><option value="shown">Published</option><option value="draft">Draft</option><option value="hidden">Archived</option><option value="unavailable">Unavailable</option></select></label><label><span className="mt-sr-only">Dietary</span><select value={dietary} onChange={(event) => setDietary(event.target.value)}><option value="all">All dietary</option><option value="veg">Vegetarian</option><option value="non_veg">Non-vegetarian</option><option value="retail">Retail</option><option value="service">Service</option><option value="other">Other</option></select></label><details className="mt-menu-more"><summary><MoreHorizontal size={18} /> More Filters</summary><div><button type="button" onClick={() => exportProducts(rows, business.currency_code || "", business.id)}><Download size={15} /> Export menu</button><Link href="/dashboard/kiosk-experience/availability">Detailed availability</Link></div></details></div>
       <div className="mt-menu-toolbar__actions"><Button variant="secondary" onClick={() => setOrganizing((value) => !value)}>{organizing ? "Stop organizing" : "Organize"}</Button><div className="mt-menu-view" aria-label="Item view"><button type="button" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={18} /><span className="mt-sr-only">List view</span></button><button type="button" aria-pressed={view === "grid"} onClick={() => setView("grid")}><Grid2X2 size={18} /><span className="mt-sr-only">Grid view</span></button></div></div>
     </div>
     <div className="mt-menu-scopes" role="group" aria-label="Availability and attention filter">{(["all", "available", "unavailable", "attention"] as MenuScope[]).map((value) => <button type="button" key={value} aria-pressed={scope === value} onClick={() => setScope(value)}>{value === "attention" && <AlertTriangle size={15} />}{readable(value)}<span>{value === "all" ? rows.length : value === "available" ? rows.filter(isProductAvailable).length : value === "unavailable" ? rows.filter((item) => !isProductAvailable(item)).length : rows.filter((item) => itemAttentionIssues(item).length).length}</span></button>)}</div>

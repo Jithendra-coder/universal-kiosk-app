@@ -1,6 +1,8 @@
+import csv
+import io
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 
 from database import DbClient, get_db_client
 from deps import require_user_id
@@ -61,6 +63,40 @@ def delete_category(
 ):
     product_service.delete_category(client, category_id, user_id)
     return ApiResponse(message="Category deleted.")
+
+
+@router.get("/businesses/{business_id}/products/export")
+def export_products_csv(
+    business_id: UUID,
+    user_id: UUID = Depends(require_user_id),
+    client: DbClient = Depends(get_db_client),
+):
+    assert_business_access(client, business_id, user_id, CATALOG_READ_ROLES)
+    products = product_service.list_products(client, business_id, include_unavailable=True)
+    categories = product_service.list_categories(client, business_id)
+    cat_map = {str(c["id"]): c["name"] for c in categories}
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Name", "SKU", "Price", "Category ID", "Category Name", "Dietary", "Available", "Status"])
+    for item in products:
+        writer.writerow([
+            item.get("name", ""),
+            item.get("sku") or "",
+            item.get("price", 0),
+            item.get("category_id") or "",
+            cat_map.get(str(item.get("category_id") or ""), ""),
+            item.get("item_type", ""),
+            "true" if item.get("is_available") else "false",
+            item.get("menu_status") or "draft",
+        ])
+
+    csv_data = output.getvalue()
+    return Response(
+        content=csv_data,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="menu-items-{business_id}.csv"'},
+    )
 
 
 @router.get("/businesses/{business_id}/products")

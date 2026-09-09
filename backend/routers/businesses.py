@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from database import DbClient, get_db_client
 from deps import require_user_id
 from schemas import ApiResponse, BusinessCreate, BusinessTypeSelection, BusinessUpdate, OnboardingStatus, OwnerPinSet, StaffInvite, StaffUpdate
-from services import business_service, pin_service, staff_service
+from services import business_service, capability_service, pin_service, schedule_service, staff_service
 
 router = APIRouter(prefix="/businesses", tags=["businesses"])
 onboarding_router = APIRouter(prefix="/onboarding", tags=["onboarding"])
@@ -69,6 +69,23 @@ def get_slug_options(
     client: DbClient = Depends(get_db_client),
 ):
     return business_service.slug_options(client, user_id, name=name, slug=slug)
+
+
+@router.get("/capabilities/{business_type}")
+def get_business_capabilities(business_type: str):
+    return {
+        "capabilities": capability_service.get_capabilities(business_type),
+        "itemTypeOptions": capability_service.get_item_type_options(business_type),
+    }
+
+
+@router.get("/{business_id}/operating-status")
+def get_business_operating_status(
+    business_id: UUID,
+    client: DbClient = Depends(get_db_client),
+):
+    business = business_service.get_business_by_id(client, business_id)
+    return schedule_service.get_store_availability(business)
 
 
 @router.get("/{business_id}")

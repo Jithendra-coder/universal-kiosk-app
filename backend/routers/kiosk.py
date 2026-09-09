@@ -6,7 +6,7 @@ from uuid import UUID
 from config import get_settings
 from database import db_context
 from schemas import ApiResponse, DeviceHeartbeat, KioskExperienceTestOrderCreate, KioskMenu, KioskTestOrderCreate, KioskTestSessionExchange, OrderCreate, OwnerPinVerify
-from services import device_service, kiosk_service, order_service, pin_service, setup_service, test_session_service
+from services import device_service, kiosk_config_service, kiosk_service, order_service, pin_service, setup_service, test_session_service
 from services.rate_limit_service import RateLimitRule, assert_rate_limit
 
 router = APIRouter(prefix="/kiosk", tags=["kiosk"])
@@ -20,6 +20,14 @@ PUBLIC_ORDER_LIMIT = RateLimitRule("kiosk:public-order", 20, 60)
 PUBLIC_MENU_LIMIT = RateLimitRule("kiosk:public-menu", 120, 60)
 OWNER_PIN_LIMIT = RateLimitRule("kiosk:owner-pin", 8, 60)
 TEST_SESSION_LIMIT = RateLimitRule("kiosk:test-session", 30, 60)
+
+
+@router.get("/config/{business_type}")
+def get_kiosk_business_config(business_type: str):
+    return {
+        "config": kiosk_config_service.get_kiosk_business_config(business_type),
+        "displaySettings": kiosk_config_service.resolve_kiosk_display_settings(business_type),
+    }
 
 
 @router.get("/{business_slug}", response_model=KioskMenu)
