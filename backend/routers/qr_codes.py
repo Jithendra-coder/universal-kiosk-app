@@ -1,3 +1,4 @@
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Response
@@ -27,6 +28,6 @@ def delete_qr_code(qr_id: UUID, user_id: UUID = Depends(require_user_id), client
     return Response(status_code=204)
 
 @router.get("/{qr_id}/download")
-def download_qr(qr_id: UUID, format: str = "svg", user_id: UUID = Depends(require_user_id), client: DbClient = Depends(get_db_client)):
+def download_qr(qr_id: UUID, format: Literal["svg", "png"] = "svg", user_id: UUID = Depends(require_user_id), client: DbClient = Depends(get_db_client)):
     data, media_type, filename = qr_service.render_qr(client, qr_id, user_id, format)
     return Response(content=data, media_type=media_type, headers={"Content-Disposition": f'attachment; filename="{filename}"'})

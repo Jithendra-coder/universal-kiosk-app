@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from datetime import datetime
 
 from database import DbClient, get_db_client
@@ -19,7 +19,7 @@ def list_orders(
     start: datetime | None = None,
     end: datetime | None = None,
     location_id: UUID | None = None,
-    limit: int = 100,
+    limit: int = Query(default=100, ge=1, le=250),
     user_id: UUID = Depends(require_user_id),
     client: DbClient = Depends(get_db_client),
 ):
@@ -33,7 +33,7 @@ def list_active_orders(
     start: datetime | None = None,
     end: datetime | None = None,
     location_id: UUID | None = None,
-    limit: int = 100,
+    limit: int = Query(default=100, ge=1, le=250),
     user_id: UUID = Depends(require_user_id),
     client: DbClient = Depends(get_db_client),
 ):
@@ -47,7 +47,7 @@ def list_completed_orders(
     start: datetime | None = None,
     end: datetime | None = None,
     location_id: UUID | None = None,
-    limit: int = 100,
+    limit: int = Query(default=100, ge=1, le=250),
     user_id: UUID = Depends(require_user_id),
     client: DbClient = Depends(get_db_client),
 ):
@@ -61,7 +61,7 @@ def list_done_orders(
     start: datetime | None = None,
     end: datetime | None = None,
     location_id: UUID | None = None,
-    limit: int = 100,
+    limit: int = Query(default=100, ge=1, le=250),
     user_id: UUID = Depends(require_user_id),
     client: DbClient = Depends(get_db_client),
 ):

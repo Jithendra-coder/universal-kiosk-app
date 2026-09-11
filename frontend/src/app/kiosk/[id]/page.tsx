@@ -37,6 +37,7 @@ import {
   type KioskCarouselItem,
 } from "@/app/_components/kiosk-product-carousel";
 import { api, assetUrl, money } from "@/lib/api";
+import { useAutoReconnect } from "@/lib/connectivity";
 import { loadDraftKioskMenu, loadRealKioskMenu } from "@/features/kiosk-real/realKioskData";
 import { placeRealKioskOrder } from "@/features/kiosk-real/realOrderService";
 import { businessCapabilitiesFor, capabilityHasAnyFilter, capabilityHasFilter, type BusinessCapability } from "@/lib/business-capabilities";
@@ -1315,6 +1316,12 @@ function KioskLoadingState() {
 }
 
 function KioskUnavailableState({ hasError, onRetry }: { hasError: boolean; onRetry: () => void }) {
+  const { isReconnecting, probeNow } = useAutoReconnect({
+    isError: hasError,
+    onReconnect: onRetry,
+    intervalMs: 3000,
+  });
+
   return (
     <main className="kiosk-ui kiosk-stage grid min-h-screen place-items-center p-4 text-[#0F172A]">
       <section className="w-full max-w-[400px] rounded-[32px] border border-[#E2E8F0] bg-white p-6 text-center shadow-[0_20px_54px_rgba(15,23,42,0.10)]">
@@ -1324,15 +1331,21 @@ function KioskUnavailableState({ hasError, onRetry }: { hasError: boolean; onRet
         <h1 className="mt-5 text-2xl font-black tracking-tight">This kiosk is unavailable</h1>
         <p className="mt-2 text-sm font-semibold leading-6 text-[#64748B]">
           {hasError
-            ? "We could not load this kiosk right now. Please retry when the connection is available."
+            ? "We could not load this kiosk right now. It will automatically reload when the server connection is restored."
             : "This customer screen is not ready for ordering yet."}
         </p>
+        {hasError && (
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#B2DDFF] bg-[#EFF8FF] px-3.5 py-1.5 text-xs font-semibold text-[#175CD3]">
+            <span className="h-2 w-2 animate-ping rounded-full bg-[#155EEF]" />
+            {isReconnecting ? "Checking connection…" : "Auto-reloading when available…"}
+          </div>
+        )}
         <button
           type="button"
-          onClick={onRetry}
+          onClick={() => void (hasError ? probeNow() : onRetry())}
           className="mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#050608] px-5 text-sm font-black text-white shadow-[0_14px_28px_rgba(15,23,42,0.18)]"
         >
-          Retry
+          {isReconnecting ? "Connecting…" : "Retry now"}
           <ArrowRight size={18} />
         </button>
       </section>

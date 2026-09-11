@@ -23,11 +23,12 @@ def bootstrap(
     business = business_service.get_primary_business_for_user(client, user_id)
     role = business_service.get_business_role_for_user(client, business, user_id).value if business else None
     setup = None
-    alerts = {"unresolved_count": 0}
+    alerts = {"unresolved_count": 0, "active_count": 0, "alerts": []}
     if business:
         if role in {"owner", "admin"}:
             setup = setup_service.setup_overview(client, UUID(business["id"]), user_id)
-        alerts = alert_service.alert_summary(client, UUID(business["id"]), user_id)
+        if role in ADMIN_ROLES:
+            alerts = alert_service.alert_summary(client, UUID(business["id"]), user_id)
     return {
         "user": user,
         "onboarding": status,

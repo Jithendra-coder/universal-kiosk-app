@@ -42,6 +42,8 @@ JSON_FIELDS = {
     "store_schedule",
     "tags",
     "tracking_metadata",
+    "handover_metadata",
+    "rework_metadata",
 }
 UPSERT_CONFLICTS = {
     "profiles": ("id",),

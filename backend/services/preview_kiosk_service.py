@@ -9,7 +9,7 @@ from uuid import UUID
 from database import DbClient
 from schemas_preview_kiosk import PreviewKioskRenderRequest
 from services import business_service
-from services.product_service import list_categories, list_products
+from services.product_service import list_categories, list_modifier_groups_for_products, list_products
 
 
 SAFE_BUSINESS_DRAFT_KEYS = {
@@ -82,6 +82,10 @@ def render_preview_kiosk(client: DbClient, user_id: UUID, payload: PreviewKioskR
         for product in list_products(client, business_id, include_unavailable=True)
         if product.get("is_available")
     ]
+    product_ids = [str(p["id"]) for p in products if p.get("id")]
+    modifiers_by_product = list_modifier_groups_for_products(client, business_id, product_ids)
+    for product in products:
+        product["modifier_groups"] = modifiers_by_product.get(str(product.get("id")), [])
     return {
         "business": preview_business,
         "categories": categories,

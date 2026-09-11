@@ -3056,6 +3056,8 @@
   .mt-skeleton span { height: 20px; border-radius: 8px; background: linear-gradient(90deg, var(--mt-surface-soft), var(--mt-border-soft), var(--mt-surface-soft)); background-size: 200% 100%; animation: mt-skeleton 1.4s ease-in-out infinite; }
   .mt-skeleton span:last-child { width: 64%; }
   @keyframes mt-skeleton { to { background-position: -200% 0; } }
+  @keyframes mt-skeleton-shimmer { to { background-position: -200% 0; } }
+  @keyframes mt-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.35); opacity: 0.55; } }
 
   .mt-feedback-state { min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: 1px dashed var(--mt-border-strong); border-radius: var(--mt-radius-card); padding: 24px; color: var(--mt-text-secondary); background: var(--mt-surface); text-align: center; }
   .mt-feedback-state strong { color: var(--mt-text-primary); font: 600 16px/24px var(--font-display); }

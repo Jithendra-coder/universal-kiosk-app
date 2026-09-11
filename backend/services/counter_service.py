@@ -10,7 +10,7 @@ from psycopg.types.json import Jsonb
 from config import get_settings
 from database import DbClient
 from schemas import CounterOverrideRequest, CounterOverrideUse, OrderCreate, OwnerPinVerify
-from services import device_service, order_service, pin_service
+from services import device_service, order_service, payment_service, pin_service
 from services.business_service import serialize_business_for_response
 
 
@@ -104,6 +104,7 @@ def cancel_pending_payment(client: DbClient, device_session: str | None, payment
         raise HTTPException(status_code=409, detail="Only unpaid counter payments can be cancelled.")
     client.execute_command("update payments set status='cancelled',updated_at=now() where id=%(payment_id)s and business_id=%(business_id)s", {"payment_id": str(payment_id), "business_id": str(business["id"])})
     client.execute_command("update orders set status='cancelled',payment_status='cancelled',cancel_reason=%(reason)s,updated_at=now() where id=%(order_id)s and business_id=%(business_id)s", {"order_id": str(payment["order_id"]), "business_id": str(business["id"]), "reason": payload.reason.strip()})
+    payment_service._restore_reserved_inventory(client, UUID(str(business["id"])), UUID(str(payment["order_id"])))
     client.execute_command("update counter_payment_claims set status='released',released_at=now() where payment_id=%(payment_id)s and business_id=%(business_id)s and status='claimed'", {"payment_id": str(payment_id), "business_id": str(business["id"])})
     _audit(client, UUID(str(business["id"])), "counter_payment_cancelled_by_manager", "payments", payment_id, device, {"reason": payload.reason.strip(), "action": claims.get("action")})
     return {"cancelled": True, "payment_id": str(payment_id)}

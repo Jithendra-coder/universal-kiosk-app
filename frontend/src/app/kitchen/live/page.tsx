@@ -1,4 +1,5 @@
 import { Suspense } from "react";
 import { KitchenApp } from "@/features/kitchen/KitchenApp";
+import { KitchenDisplaySkeleton } from "@/components/ui/Skeletons";
 
-export default function KitchenLivePage() { return <Suspense fallback={<main className="staff-recovery"><p>Loading Kitchen…</p></main>}><KitchenApp /></Suspense>; }
+export default function KitchenLivePage() { return <Suspense fallback={<KitchenDisplaySkeleton />}><KitchenApp /></Suspense>; }

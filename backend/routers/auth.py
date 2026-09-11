@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from config import Settings, get_settings
-from database import DbClient, db_context, get_db_client
-from deps import require_user_id
+from database import DbClient, get_db_client
+from deps import _bearer_token, require_user_id
 from schemas import (
     ApiResponse,
     AuthLogin,
@@ -32,13 +32,13 @@ RESEND_VERIFICATION_LIMIT = RateLimitRule("auth:resend-verification", 5, 60)
 LOGIN_LIMIT = RateLimitRule("auth:login", 8, 60)
 FORGOT_PASSWORD_LIMIT = RateLimitRule("auth:forgot-password", 5, 60)
 RESET_PASSWORD_LIMIT = RateLimitRule("auth:reset-password", 5, 60)
+REAUTHENTICATE_LIMIT = RateLimitRule("auth:reauthenticate", 10, 60)
 
 
 @router.post("/signup", response_model=SignupStartResponse)
-def signup(payload: AuthSignup, request: Request):
+def signup(payload: AuthSignup, request: Request, client: DbClient = Depends(get_db_client)):
     assert_rate_limit(request, SIGNUP_LIMIT, identity_parts=[payload.email])
-    with db_context() as client:
-        return auth_service.signup(client, payload)
+    return auth_service.signup(client, payload)
 
 
 @router.post("/signup/start", response_model=SignupStartResponse)
@@ -130,10 +130,8 @@ def login(
 
 @router.post("/reauthenticate", response_model=ApiResponse)
 def reauthenticate(payload: ReauthenticateRequest, request: Request, user_id=Depends(require_user_id), client: DbClient = Depends(get_db_client)):
-    token = request.cookies.get(auth_service.SESSION_COOKIE_NAME)
-    if not token:
-        authorization = request.headers.get("authorization", "")
-        token = authorization[7:].strip() if authorization.startswith("Bearer ") else None
+    assert_rate_limit(request, REAUTHENTICATE_LIMIT, identity_parts=[str(user_id)])
+    token = request.cookies.get(auth_service.SESSION_COOKIE_NAME) or _bearer_token(request.headers.get("authorization"))
     if not token:
         raise HTTPException(status_code=401, detail="Authentication required.")
     auth_service.reauthenticate(client, user_id, token, payload)
@@ -169,10 +167,7 @@ def logout(
     settings: Settings = Depends(get_settings),
     client: DbClient = Depends(get_db_client),
 ):
-    token = request.cookies.get(auth_service.SESSION_COOKIE_NAME)
-    if not token:
-        authorization = request.headers.get("authorization", "")
-        token = authorization[7:].strip() if authorization.startswith("Bearer ") else None
+    token = request.cookies.get(auth_service.SESSION_COOKIE_NAME) or _bearer_token(request.headers.get("authorization"))
     auth_service.revoke_session(client, token)
     _clear_session_cookie(response, settings)
     return ApiResponse(message="Signed out.")

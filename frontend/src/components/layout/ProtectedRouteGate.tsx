@@ -5,6 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useBusiness } from "@/components/layout/BusinessProvider";
 import { safeSetupRoute } from "@/lib/protected-routing";
 
+import { AutoRecoveringState } from "@/components/ui/AutoRecoveringState";
+import { SetupShellSkeleton, WorkspaceSkeleton } from "@/components/ui/Skeletons";
+
 type ProtectedArea = "dashboard" | "setup";
 
 export function ProtectedRouteGate({ area, children }: { area: ProtectedArea; children: ReactNode }) {
@@ -26,7 +29,23 @@ export function ProtectedRouteGate({ area, children }: { area: ProtectedArea; ch
     if (redirectTarget) router.replace(redirectTarget);
   }, [redirectTarget, router]);
 
-  if (unresolved || redirectTarget) return <div className="mt-page-loading" role="status">Loading your workspace…</div>;
-  if (loadError || !onboardingStatus) return <div className="mt-card mt-state-card" role="alert"><strong>Could not verify your workspace.</strong><p>{loadError || "Onboarding status is unavailable."}</p><button className="mt-button mt-button--secondary" type="button" onClick={() => void Promise.all([refresh(), refreshOnboarding()])}>Try again</button></div>;
+  if (unresolved || redirectTarget) {
+    return area === "setup" ? <SetupShellSkeleton /> : <WorkspaceSkeleton />;
+  }
+
+  if (loadError || !onboardingStatus) {
+    return (
+      <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: "24px", background: "#f8fafc" }}>
+        <div style={{ width: "100%", maxWidth: "560px" }}>
+          <AutoRecoveringState
+            title="Could not verify your workspace"
+            description={loadError || "Onboarding status is currently unavailable."}
+            onRetry={async () => { await Promise.all([refresh(), refreshOnboarding()]); }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return children;
 }

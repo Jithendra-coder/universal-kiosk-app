@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LineChart } from "@/components/charts/ChartPrimitives";
 import { useBusiness } from "@/components/layout/BusinessProvider";
 import { PageContainer, SectionHeader } from "@/components/layout/DashboardPrimitives";
 import { Button, DataState, DetailsDrawer, SearchInput, Select, Skeleton, StatusBadge, StatusPill } from "@/components/ui/DashboardUI";
+import { AutoRecoveringState } from "@/components/ui/AutoRecoveringState";
+import { DashboardHomeSkeleton } from "@/components/ui/Skeletons";
 import { api, assetUrl } from "@/lib/api";
 import { formatCurrency, formatDateTime, formatDuration, formatOrderStatus } from "@/lib/formatters";
 import type { AlertRecord, DashboardStats, DeviceRecord, HomeActivation, KioskSetupOverview, Order, Product } from "@/lib/types";
@@ -54,6 +56,13 @@ export function HomePage() {
   const [loadedKey, setLoadedKey] = useState("");
   const requestKey = `${business?.id || ""}:${selectedLocationId || "all"}`;
 
+  const [reloadToken, setReloadToken] = useState(0);
+  const retry = useCallback(() => {
+    setLoadedKey("");
+    setError("");
+    setReloadToken((v) => v + 1);
+  }, []);
+
   useEffect(() => {
     if (!business?.id) return;
     let current = true;
@@ -61,7 +70,7 @@ export function HomePage() {
       .then(([activation, setup, products]) => { if (current) { setData({ activation, setup, products: products.products, stats: null, orders: [], activeOrders: [], alerts: null, devices: null }); setError(""); setLoadedKey(requestKey); } })
       .catch((cause) => { if (current) { setError(cause instanceof Error ? cause.message : "Could not load Home."); setLoadedKey(requestKey); } });
     return () => { current = false; };
-  }, [business?.id, requestKey, selectedLocationId]);
+  }, [business?.id, reloadToken, requestKey, selectedLocationId]);
 
   const mode = data && business ? resolveHomeMode(business, data.setup, data.products, data.activation.completed_order_count) : null;
   useEffect(() => {
@@ -73,10 +82,28 @@ export function HomePage() {
         setData((value) => value && ({ ...value, stats: stats.status === "fulfilled" ? stats.value : null, orders: orders.status === "fulfilled" ? orders.value.orders : [], activeOrders: activeOrders.status === "fulfilled" ? activeOrders.value.orders : [], alerts: alerts.status === "fulfilled" ? alerts.value : null, devices: devices.status === "fulfilled" ? devices.value.devices : null }));
       });
     return () => { current = false; };
-  }, [business?.id, data?.activation.completed_order_count, mode, selectedLocationId]);
+  }, [business?.id, data?.activation.completed_order_count, mode, reloadToken, selectedLocationId]);
 
-  if (businessLoading || locationsLoading || loadedKey !== requestKey || (!data && !error && !businessError)) return <PageContainer width="maximum" className="mt-home-page"><Skeleton lines={8} label="Loading Home" /></PageContainer>;
-  if (businessError || error) return <PageContainer width="standard"><DataState kind="recoverable-error" title="Home is unavailable" description={businessError || error} action={<Button variant="secondary" onClick={() => window.location.reload()}>Try again</Button>} /></PageContainer>;
+  if (businessLoading || locationsLoading || loadedKey !== requestKey || (!data && !error && !businessError)) {
+    return (
+      <PageContainer width="maximum" className="mt-home-page">
+        <DashboardHomeSkeleton />
+      </PageContainer>
+    );
+  }
+
+  if (businessError || error) {
+    return (
+      <PageContainer width="standard" style={{ padding: "40px 16px" }}>
+        <AutoRecoveringState
+          title="Home is unavailable"
+          description={businessError || error}
+          onRetry={retry}
+        />
+      </PageContainer>
+    );
+  }
+
   if (!business || !data || !mode) return <PageContainer width="standard"><DataState kind="permission-denied" title="No business selected" description="Complete business setup before opening the owner dashboard." action={<Link className="mt-card-link" href="/setup/business-details">Open setup</Link>} /></PageContainer>;
   return <PageContainer width="maximum" className="mt-home-page"><HomeLayout mode={mode} businessName={business.name}>{mode === "setup" ? <SetupHome business={business} setup={data.setup} products={data.products} /> : <BusinessHome business={business} data={data} mode={mode} locationId={selectedLocationId} />}</HomeLayout></PageContainer>;
 }

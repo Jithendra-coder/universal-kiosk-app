@@ -11,9 +11,9 @@ from services.auth_service import SESSION_COOKIE_NAME, assert_session_active, de
 def _bearer_token(authorization: str | None) -> str | None:
     if not authorization:
         return None
-    prefix = "Bearer "
-    if authorization.startswith(prefix):
-        return authorization[len(prefix) :].strip()
+    raw = authorization.strip()
+    if raw.lower().startswith("bearer "):
+        return raw[7:].strip()
     return None
 
 

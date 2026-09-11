@@ -8,6 +8,8 @@ import type { LiveDeviceContext, Order, OrderItem, Product } from "@/lib/types";
 import { connectionLabel, elapsedLabel, kitchenLabel, kitchenStage, type KitchenStage } from "@/features/staff/status";
 import { queuedKitchenEvents, removeKitchenEvent, saveKitchenEvent, type KitchenQueuedEvent } from "./offline-store";
 import { testDeviceContext, testOrder, testProducts, testSessionStateMessage } from "@/features/test-runtime";
+import { AutoRecoveringState } from "@/components/ui/AutoRecoveringState";
+import { KitchenDisplaySkeleton } from "@/components/ui/Skeletons";
 
 type Tab = "live" | "availability" | "completed";
 type KitchenOrder = Order & { source?: string; items?: (OrderItem & { completed_quantity?: number; kitchen_status?: string })[]; kitchen?: { stage?: KitchenStage; is_held?: boolean; hold_reason?: string; delayed?: boolean; delay_minutes?: number }; sync_state?: string };
@@ -48,8 +50,29 @@ export function KitchenApp({ runtimeMode = "live" }: { runtimeMode?: "live" | "t
   const toggleSound = async () => { const next = !sound; setSound(next); if (isTest) return; try { await api.liveKitchenSetPreferences({ sound_enabled: next }); setAreaError("preferences"); } catch { setSound(!next); setAreaError("preferences", "Kitchen sound preference unavailable."); } };
   const fullscreen = () => { if (!document.fullscreenElement) void document.documentElement.requestFullscreen?.(); else void document.exitFullscreen?.(); };
   const loadAllDay = useCallback(async () => { if (isTest) { setAllDay([]); return; } try { setAllDay((await api.liveKitchenAllDay()).items); } catch { setNotice("Couldn't load All Day view."); } }, [isTest]);
-  if (shellError && !context) return <main className="staff-recovery"><section><h1>MenuTap Kitchen</h1><p>{isTest ? testSessionStateMessage(new Error(shellError)) : shellError}</p><button onClick={() => router.push(isTest ? "/dashboard/test" : "/device/start")}>{isTest ? "Return to Test Hub" : "Pair or recover device"}</button></section></main>;
-  if (loading && !context) return <main className="staff-recovery"><p>Securing Kitchen session…</p></main>;
+  if (shellError && !context) {
+    return (
+      <main className="staff-recovery">
+        <section style={{ maxWidth: "500px", width: "100%", padding: "12px" }}>
+          <AutoRecoveringState
+            title="MenuTap Kitchen"
+            description={isTest ? testSessionStateMessage(new Error(shellError)) : shellError}
+            onRetry={load}
+            action={
+              <button
+                type="button"
+                className="mt-button mt-button--secondary"
+                onClick={() => router.push(isTest ? "/dashboard/test" : "/device/start")}
+              >
+                {isTest ? "Return to Test Hub" : "Pair or recover device"}
+              </button>
+            }
+          />
+        </section>
+      </main>
+    );
+  }
+  if (loading && !context) return <KitchenDisplaySkeleton />;
   return <main className="staff-app kitchen-app-v2">
     <KitchenHeader context={context} now={now} online={online} queue={queue.length} sound={sound} testMode={isTest} onSound={toggleSound} onFullscreen={fullscreen} onExit={() => isTest ? router.push("/dashboard/test") : void api.clearLiveDeviceSession().then(() => router.push("/device/start"))}/>
     <nav className="staff-primary-nav kitchen-primary-nav" aria-label="Kitchen application" role="tablist">{([ ["live", "Live Orders"], ["availability", "Item Availability"], ["completed", "Completed"] ] as const).map(([key, label]) => <button key={key} role="tab" aria-selected={tab === key} className={tab === key ? "active" : ""} onClick={() => changeTab(key)}>{label}</button>)}{tab === "live" && <div className="kitchen-nav-actions"><button onClick={() => setAllDayOpen(true)}>All Day View</button><button onClick={() => setDelayedOnly((value) => !value)} className={delayedOnly ? "active-filter" : ""}><Filter size={15}/>{delayedOnly ? "Delayed" : "Filter"}</button></div>}</nav>

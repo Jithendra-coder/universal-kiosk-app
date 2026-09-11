@@ -7,6 +7,8 @@ import { ChartCard, LineChart } from "@/components/charts/ChartPrimitives";
 import { useBusiness } from "@/components/layout/BusinessProvider";
 import { PageContainer, PageHeader, Tabs } from "@/components/layout/DashboardPrimitives";
 import { Button, Card, DataState, DataTable, FilterToolbar, MetricCard, Select, StatusPill } from "@/components/ui/DashboardUI";
+import { AutoRecoveringState } from "@/components/ui/AutoRecoveringState";
+import { InsightsSkeleton } from "@/components/ui/Skeletons";
 import { api } from "@/lib/api";
 import { formatCategoryName, formatCurrency, formatDateTime, formatOrderStatus, formatPaymentStatus } from "@/lib/formatters";
 import type { Category, DashboardStats, DeviceRecord, Order, Product } from "@/lib/types";
@@ -17,7 +19,7 @@ type PaymentAnalytics = Awaited<ReturnType<typeof api.payments>>;
 type Data = { stats: DashboardStats; previous: DashboardStats | null; orders: Order[]; products: Product[]; categories: Category[]; devices: DeviceRecord[] | null; payments: PaymentAnalytics | null };
 type Props = { data: Data; locations: Array<{ id: string; name: string }>; reporting: Reporting; onChange: (next: Partial<Reporting>) => void; errors: Record<string, string>; retry: () => void };
 
-export function BusinessInsightsPage({ mode }: { mode: Mode }) { return <Suspense fallback={<div className="insights-reset-loading" aria-busy="true">Loading Insights</div>}><Insights mode={mode} /></Suspense>; }
+export function BusinessInsightsPage({ mode }: { mode: Mode }) { return <Suspense fallback={<PageContainer width="wide"><InsightsSkeleton /></PageContainer>}><Insights mode={mode} /></Suspense>; }
 
 function Insights({ mode }: { mode: Mode }) {
   const { business, loading: businessLoading, error: businessError, locations } = useBusiness();
@@ -46,12 +48,12 @@ function Insights({ mode }: { mode: Mode }) {
     return () => { alive = false; };
   }, [business?.id, comparison, end, fullAnalytics, locationId, mode, retryCount, start]);
   const update = (next: Partial<Reporting>) => { const merged = { ...reporting, ...next }; const query = new URLSearchParams(params.toString()); query.set("preset", merged.preset); query.set("start", merged.start); query.set("end", merged.end); query.set("comparison", merged.comparison); if (merged.locationId) query.set("location_id", merged.locationId); else query.delete("location_id"); router.replace(`${pathname}?${query.toString()}`, { scroll: false }); };
-  if (businessLoading) return <PageContainer width="wide"><SkeletonPage /></PageContainer>;
-  if (businessError) return <PageContainer width="wide"><DataState kind="recoverable-error" title="Couldn't load Insights" description={businessError} action={<Button variant="secondary" onClick={() => window.location.reload()}>Retry</Button>} /></PageContainer>;
+  if (businessLoading) return <PageContainer width="wide"><InsightsSkeleton /></PageContainer>;
+  if (businessError) return <PageContainer width="wide" style={{ padding: "40px 16px" }}><AutoRecoveringState title="Couldn't load Insights" description={businessError} onRetry={() => setRetryCount((value) => value + 1)} /></PageContainer>;
   if (!business) return <PageContainer width="wide"><DataState kind="permission-denied" title="No business selected" description="Choose a business before opening Insights." action={<Link className="mt-card-link" href="/setup/business-details">Open setup</Link>} /></PageContainer>;
-  if (loading) return <PageContainer width="wide"><SkeletonPage /></PageContainer>;
-  if (error) return <PageContainer width="wide"><DataState kind="recoverable-error" title="Couldn't load Insights" description={error} action={<Button variant="secondary" onClick={() => setRetryCount((value) => value + 1)}>Retry</Button>} /></PageContainer>;
-  if (!data) return <PageContainer width="wide"><SkeletonPage /></PageContainer>;
+  if (loading) return <PageContainer width="wide"><InsightsSkeleton /></PageContainer>;
+  if (error) return <PageContainer width="wide" style={{ padding: "40px 16px" }}><AutoRecoveringState title="Couldn't load Insights" description={error} onRetry={() => setRetryCount((value) => value + 1)} /></PageContainer>;
+  if (!data) return <PageContainer width="wide"><InsightsSkeleton /></PageContainer>;
   const common = { data, locations: locations.map((item) => ({ id: item.id, name: item.name })), reporting, onChange: update, errors, retry: () => setRetryCount((value) => value + 1) };
   if (mode === "sales-reports") return <PageContainer width="wide"><SalesOrdersLocked {...common} /></PageContainer>;
   if (fullAnalytics) return <FullAnalytics {...common} />;
@@ -134,7 +136,7 @@ function Reports({ data, reporting }: { data: Data; reporting: Reporting }) { co
 function InsightsToolbar({ reporting, locations, onChange }: { reporting: Reporting; locations: Array<{ id: string; name: string }>; onChange: (next: Partial<Reporting>) => void }) { return <FilterToolbar><Select label="Date" value={reporting.preset} onChange={(event) => { const preset = event.target.value as Reporting["preset"]; onChange({ preset, ...rangeFor(preset) }); }}><option value="today">Today</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option></Select><Select label="Location" value={reporting.locationId || "all"} onChange={(event) => onChange({ locationId: event.target.value === "all" ? null : event.target.value })}><option value="all">All locations</option>{locations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select><Select label="Compare" value={reporting.comparison} onChange={(event) => onChange({ comparison: event.target.value as Reporting["comparison"] })}><option value="previous">Previous period</option><option value="none">No comparison</option></Select></FilterToolbar>; }
 function SummaryRows({ rows }: { rows: Array<[string, ReactNode]> }) { return rows.length ? <dl className="insights-reset-summary">{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl> : <DataState kind="empty" title="No data for this period" />; }
 function InlineError({ message, retry }: { message: string; retry: () => void }) { return <DataState kind="recoverable-error" title={message} action={<Button variant="secondary" onClick={retry}>Retry</Button>} />; }
-function SkeletonPage() { return <div className="insights-reset-loading" aria-busy="true"><span /><span /><span />Loading Insights</div>; }
+function SkeletonPage() { return <InsightsSkeleton />; }
 function completedCount(data: Data) { return data.stats.completed_orders ?? data.orders.filter(isCompleted).length; }
 function isCompleted(order: Order) { return order.status === "completed" && !["failed", "cancelled", "expired", "unpaid", "pending", "pay_at_counter_pending"].includes(order.payment_status); }
 function pill(status: string) { return status === "completed" ? "success" : status === "cancelled" ? "danger" : status === "pending" ? "warning" : "info"; }

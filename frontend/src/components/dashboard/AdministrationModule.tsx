@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { useBusiness } from "@/components/layout/BusinessProvider";
 import { FilterBar, PageContainer, PageHeader, Stack, Tabs } from "@/components/layout/DashboardPrimitives";
 import { Button, ConfirmationDialog, DataState, DataTable, DetailsDrawer, Input, SearchInput, Select, Skeleton, StatusPill } from "@/components/ui/DashboardUI";
+import { AutoRecoveringState } from "@/components/ui/AutoRecoveringState";
+import { AdministrationSkeleton } from "@/components/ui/Skeletons";
 import { api } from "@/lib/api";
 import type { AdministrationActivity, BusinessLocation, DevicePairingRequest, DeviceRecord, PaymentAccount, PaymentRecord, StaffMember, StaffRole } from "@/lib/types";
 import type { Business } from "@/services/api";
@@ -21,8 +23,8 @@ const explain = (cause: unknown, fallback: string) => cause instanceof Error ? c
 export function AdministrationModule({ mode }: { mode: AdministrationMode }) {
   const { business, loading, error } = useBusiness();
   const [reload, setReload] = useState(0);
-  if (loading) return <PageContainer width="wide"><Skeleton lines={7} label="Loading Administration" /></PageContainer>;
-  if (error) return <PageContainer width="wide"><DataState kind="recoverable-error" title="Administration is unavailable" description="We could not load your Administration workspace." action={<Button variant="secondary" onClick={() => setReload((value) => value + 1)}>Retry</Button>} /></PageContainer>;
+  if (loading) return <PageContainer width="wide"><AdministrationSkeleton /></PageContainer>;
+  if (error) return <PageContainer width="wide" style={{ padding: "40px 16px" }}><AutoRecoveringState title="Administration is unavailable" description="We could not load your Administration workspace." onRetry={() => setReload((value) => value + 1)} /></PageContainer>;
   if (!business) return <PageContainer width="compact"><DataState kind="permission-denied" title="No business selected" description="Choose a business before opening Administration." /></PageContainer>;
   return <AdminPage key={`${mode}-${reload}`} business={business} mode={mode} refresh={() => setReload((value) => value + 1)} />;
 }

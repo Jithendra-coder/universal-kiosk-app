@@ -63,7 +63,7 @@ def assert_rate_limit(
     keys = [_bucket_key(request, f"{rule.scope}:source", (), settings.jwt_secret, settings.rate_limit_trusted_proxy_cidrs)]
     if identity:
         keys.append(_identity_bucket_key(rule.scope, identity, settings.jwt_secret))
-    if getattr(settings, "environment", "local").lower() in {"prod", "production"}:
+    if getattr(settings, "environment", "local").lower() in {"prod", "production"} and settings.redis_url:
         for key in keys:
             _assert_shared_bucket(key, rule, window_seconds, settings.redis_url)
         return

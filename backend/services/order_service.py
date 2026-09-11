@@ -471,6 +471,7 @@ def update_order_status(client: DbClient, user_id: UUID, order_id: UUID, payload
     update_payload.update(timestamps_for_status(next_status))
     if next_status == OrderStatus.CANCELLED.value:
         update_payload["cancel_reason"] = payload.cancel_reason.strip()
+        payment_service._restore_reserved_inventory(client, payload.business_id, order_id)
     response = (
         client.table("orders")
         .update(update_payload)

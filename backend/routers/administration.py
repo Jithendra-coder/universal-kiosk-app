@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Cookie, Depends, Header, Query
 
 from database import DbClient, get_db_client
-from deps import require_user_id
+from deps import _bearer_token, require_user_id
 from schemas import AdministrationInvitationCreate, ApiKeyCreate, ApiResponse, BusinessLocationCreate, BusinessLocationUpdate, CustomRoleAssignment, CustomRoleInput, IntegrationInput, InvitationAccept, PaymentLocationAssignmentInput, SecurityPolicyInput, WebhookCreate
 from services import administration_closure_service, administration_service
 from services import webhook_delivery_service
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/businesses/{business_id}/administration", tags=["adm
 
 
 def _current_session(session_cookie: str | None, authorization: str | None) -> UUID | None:
-    token = session_cookie or (authorization[7:].strip() if authorization and authorization.startswith("Bearer ") else None)
+    token = session_cookie or _bearer_token(authorization)
     return session_id_from_access_token(token) if token else None
 
 

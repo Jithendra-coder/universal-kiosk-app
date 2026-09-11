@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 
 from database import DbClient, get_db_client
 from deps import require_user_id
@@ -18,6 +18,7 @@ from schemas import (
 from services.rate_limit_service import RateLimitRule, assert_rate_limit
 from services import payment_service
 
+
 router = APIRouter(tags=["payments"])
 PAYTM_QR_LIMIT = RateLimitRule("payment:paytm-qr", 60, 60)
 PAYMENT_STATUS_LIMIT = RateLimitRule("payment:status", 120, 60)
@@ -29,7 +30,7 @@ PAYTM_WEBHOOK_LIMIT = RateLimitRule("payment:webhook:paytm", 300, 60)
 @router.get("/businesses/{business_id}/payments")
 def list_payments(
     business_id: UUID,
-    limit: int = 100,
+    limit: int = Query(default=100, ge=1, le=250),
     user_id: UUID = Depends(require_user_id),
     client: DbClient = Depends(get_db_client),
 ):

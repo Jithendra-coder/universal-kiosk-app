@@ -10,6 +10,8 @@ import type { Category, KioskMenu, LiveDeviceContext, ModifierOption, Order, Pro
 import { connectionLabel, elapsedLabel, kitchenLabel, kitchenStage } from "@/features/staff/status";
 import { listQueuedCounterOrders, queueCounterOrder, removeQueuedCounterOrder, updateQueuedCounterOrder } from "./offline-store";
 import { testDeviceContext, testOrder, testSessionStateMessage } from "@/features/test-runtime";
+import { AutoRecoveringState } from "@/components/ui/AutoRecoveringState";
+import { CounterPosSkeleton } from "@/components/ui/Skeletons";
 
 type Tab = "ordering" | "kitchen" | "handover";
 type Source = "counter" | "kiosk";
@@ -111,8 +113,29 @@ export function CounterApp({ runtimeMode = "live" }: { runtimeMode?: "live" | "t
   const placeOrder = async () => { if (!cart.length || (orderType === "dine_in" && !table.trim())) { setNotice(orderType === "dine_in" ? "Add a table number before payment." : "Add an item before payment."); return; } const payload = orderPayload(); const idempotencyKey = `counter-${makeId()}`; setBusy("payment"); try { if (isTest) { const created = await api.testRuntimeCreateOrder(payload); await api.testRuntimeMarkPaid(String(created.id)); } else { const order = await api.liveCounterSessionCreateOrder(payload, idempotencyKey); const payment = order.payment?.payment; if (payment?.id && ["cash", "pay_at_counter"].includes(paymentMethod)) await api.liveCounterSessionMarkPaid(payment.id, { business_id: order.business_id, amount: order.total_amount, method: paymentMethod }); } setCart([]); setTable(""); setNotes(""); setNotice("Payment confirmed and order sent to Kitchen."); await refreshOperational(); } catch (error) { const message = error instanceof Error ? error.message : "Payment could not be confirmed."; if (!isTest && (!online || /network|offline|fetch/i.test(message))) { await queueCounterOrder({ localId: makeId(), idempotencyKey, payload: payload as Record<string, unknown>, createdAt: new Date().toISOString(), status: "pending", retryCount: 0 }); setQueued((count) => count + 1); setNotice("Saved locally. Payment and Kitchen dispatch will wait for a safe retry."); } else setNotice(message); } finally { setBusy(""); } };
   const handover = async (order: Order) => { setBusy(order.id); try { if (isTest) await api.testCounterHandover(order.id); else await api.liveCounterSessionCompleteOrder(order.id, { business_id: order.business_id }); setNotice(`Order #${order.order_number || order.public_token} handed over.`); await refreshOperational(); } catch (error) { setNotice(error instanceof Error ? error.message : "Handover could not be completed."); } finally { setBusy(""); } };
   const resumeHeld = async (item: Record<string, unknown>) => { setBusy(String(item.id)); try { const resumed = await api.liveCounterResumeHeldOrder(String(item.id)); const payload = resumed.payload as { items?: Array<{ product_id: string; quantity: number; customizations?: Array<{ option_id: string; name: string; price_delta: number }> }>; order_type?: "dine_in" | "takeaway"; table_label?: string; notes?: string }; const lines = (payload.items || []).flatMap((entry) => { const product = menu?.products.find((candidate) => candidate.id === entry.product_id); return product ? [{ product, quantity: entry.quantity, customizations: entry.customizations || [] }] : []; }); setCart(lines); setOrderType(payload.order_type || "takeaway"); setTable(payload.table_label || ""); setNotes(payload.notes || ""); setSource("counter"); switchTab("ordering"); await refreshOperational(); } catch (error) { setNotice(error instanceof Error ? error.message : "Could not resume held order."); } finally { setBusy(""); } };
-  if (shellError && !context) return <main className="staff-recovery"><section><h1>MenuTap Counter</h1><p>{isTest ? testSessionStateMessage(new Error(shellError)) : shellError}</p><button onClick={() => router.push(isTest ? "/dashboard/test" : "/device/start")}>{isTest ? "Return to Test Hub" : "Pair or recover device"}</button></section></main>;
-  if (loading && !context) return <main className="staff-recovery"><p>Securing Counter session…</p></main>;
+  if (shellError && !context) {
+    return (
+      <main className="staff-recovery">
+        <section style={{ maxWidth: "500px", width: "100%", padding: "12px" }}>
+          <AutoRecoveringState
+            title="MenuTap Counter"
+            description={isTest ? testSessionStateMessage(new Error(shellError)) : shellError}
+            onRetry={load}
+            action={
+              <button
+                type="button"
+                className="mt-button mt-button--secondary"
+                onClick={() => router.push(isTest ? "/dashboard/test" : "/device/start")}
+              >
+                {isTest ? "Return to Test Hub" : "Pair or recover device"}
+              </button>
+            }
+          />
+        </section>
+      </main>
+    );
+  }
+  if (loading && !context) return <CounterPosSkeleton />;
   return <main className="staff-app counter-app-v2">
     <CounterHeader context={context} online={online} queued={queued} testMode={isTest} onLock={() => isTest ? router.push("/dashboard/test") : void api.clearLiveDeviceSession().then(() => router.push("/device/start"))} />
     <nav className="staff-primary-nav counter-primary-nav" aria-label="Counter application" role="tablist">{([ ["ordering", "Counter Ordering"], ["kitchen", "Kitchen Orders"], ["handover", "Handover History"] ] as const).map(([key, label]) => <button key={key} role="tab" aria-selected={tab === key} className={tab === key ? "active" : ""} onClick={() => switchTab(key)}>{label}{key === "kitchen" && pending.length > 0 ? <b>{pending.length}</b> : null}</button>)}</nav>

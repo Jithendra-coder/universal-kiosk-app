@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, type Business } from "@/services/api";
 import { ApiError } from "@/lib/api";
+import { useAutoReconnect } from "@/lib/connectivity";
 import type { BusinessLocation, OnboardingStatus } from "@/lib/types";
 
 type BusinessContextValue = {
@@ -113,6 +114,14 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     const stored = typeof window !== "undefined" ? window.sessionStorage.getItem(`menutap.location.${business.id}`) : null;
     void Promise.resolve().then(() => setSelectedLocationIdState(stored || null)).then(refreshLocations);
   }, [business?.id, refreshLocations]);
+
+  useAutoReconnect({
+    isError: Boolean(error || onboardingError),
+    onReconnect: async () => {
+      await Promise.all([refresh(), refreshOnboarding()]);
+    },
+    intervalMs: 3500,
+  });
 
   const value = useMemo(() => ({ business, loading, error, refresh, onboardingStatus, onboardingLoading, onboardingError, refreshOnboarding, locations, locationsLoading, locationsError, selectedLocationId, setSelectedLocationId, refreshLocations }), [business, error, loading, refresh, onboardingStatus, onboardingLoading, onboardingError, refreshOnboarding, locations, locationsLoading, locationsError, selectedLocationId, setSelectedLocationId, refreshLocations]);
   return <BusinessContext.Provider value={value}>{children}</BusinessContext.Provider>;

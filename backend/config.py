@@ -94,8 +94,6 @@ class Settings(BaseSettings):
             raise ValueError("DATABASE_URL must point to a production PostgreSQL instance.")
         if self.allow_dev_auth_bypass:
             raise ValueError("ALLOW_DEV_AUTH_BYPASS must be false in production.")
-        if not self.redis_url:
-            raise ValueError("REDIS_URL is required in production for shared rate-limit enforcement.")
         if not self.cors_origins or any(origin == "*" for origin in self.cors_origins):
             raise ValueError("ALLOWED_ORIGINS must contain explicit production browser origins.")
         if (

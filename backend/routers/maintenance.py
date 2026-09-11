@@ -1,3 +1,5 @@
+import secrets
+
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 
 from config import Settings, get_settings
@@ -28,5 +30,5 @@ def _require_maintenance_secret(settings: Settings, supplied: str | None) -> Non
     expected = settings.payment_expiry_cron_secret
     if not expected:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Payment expiry maintenance is not configured.")
-    if supplied != expected:
+    if supplied is None or not secrets.compare_digest(supplied, expected):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Maintenance access denied.")

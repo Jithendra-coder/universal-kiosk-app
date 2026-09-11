@@ -538,7 +538,7 @@ def live_kitchen_orders(
 
 @router.patch("/kitchen/live/{device_token}/orders/{order_id}/status", response_model=ApiResponse)
 def live_kitchen_update_order_status(
-    device_token: str,
+    device_token: DeviceToken,
     order_id: UUID,
     payload: OrderStatusUpdate,
     request: Request,

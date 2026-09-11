@@ -986,3 +986,98 @@ def test_expiring_online_payment_marks_order_cancelled_and_restores_inventory(mo
 
 async def async_upload(file: DummyUpload) -> dict:
     return await storage_service.upload_asset(uuid4(), file, "brand")
+
+
+def test_bearer_token_case_insensitive():
+    from deps import _bearer_token
+
+    assert _bearer_token("Bearer test-token-123") == "test-token-123"
+    assert _bearer_token("bearer test-token-456") == "test-token-456"
+    assert _bearer_token("  Bearer   test-token-789  ") == "test-token-789"
+    assert _bearer_token("BEARER uppercase-token") == "uppercase-token"
+    assert _bearer_token("Basic dXNlcjpwYXNz") is None
+    assert _bearer_token(None) is None
+    assert _bearer_token("") is None
+
+
+def test_admin_bootstrap_allows_kitchen_and_cashier_roles(monkeypatch):
+    from routers import admin
+
+    user_id = uuid4()
+    business_id = uuid4()
+    business = {"id": str(business_id), "name": "Kiosk Cafe"}
+
+    monkeypatch.setattr(admin.auth_service, "get_user", lambda _client, _uid: {"id": str(_uid), "email": "staff@test.com"})
+    monkeypatch.setattr(admin.business_service, "onboarding_status", lambda _client, _uid: {"completed": True})
+    monkeypatch.setattr(admin.business_service, "get_primary_business_for_user", lambda _client, _uid: business)
+    monkeypatch.setattr(admin.business_service, "serialize_business_for_response", lambda b: b)
+
+    for staff_role in ["kitchen", "cashier"]:
+        monkeypatch.setattr(
+            admin.business_service,
+            "get_business_role_for_user",
+            lambda _client, _b, _uid, role=staff_role: SimpleNamespace(value=role),
+        )
+
+        response = admin.bootstrap(user_id=user_id, client=object())
+        assert response["role"] == staff_role
+        assert response["alerts"] == {"unresolved_count": 0, "active_count": 0, "alerts": []}
+        assert response["setup"] is None
+
+
+def test_order_status_update_cancelled_restores_inventory(monkeypatch):
+    from schemas import OrderStatus, OrderStatusUpdate
+    from services import order_service
+
+    business_id = uuid4()
+    order_id = uuid4()
+    user_id = uuid4()
+    restored: list[tuple[UUID, UUID]] = []
+
+    monkeypatch.setattr(order_service, "assert_business_access", lambda _client, b_id, _uid, _roles: {"id": str(b_id)})
+    monkeypatch.setattr(order_service, "get_order", lambda _client, o_id, b_id: {"id": str(o_id), "business_id": str(b_id), "status": "pending"})
+    monkeypatch.setattr(order_service.payment_service, "_restore_reserved_inventory", lambda _client, b_id, o_id: restored.append((b_id, o_id)))
+
+    class FakeOrdersClient:
+        def table(self, name: str):
+            self.last_table = name
+            return self
+        def update(self, payload: dict):
+            self.update_payload = payload
+            return self
+        def eq(self, col: str, val: str):
+            return self
+        def execute(self):
+            return SimpleNamespace(data=[{"id": str(order_id)}])
+        def insert(self, payload: dict):
+            return self
+
+    client = FakeOrdersClient()
+    payload = OrderStatusUpdate(business_id=business_id, status=OrderStatus.CANCELLED, cancel_reason="Out of stock")
+    order_service.update_order_status(client, user_id, order_id, payload)
+
+    assert restored == [(business_id, order_id)]
+
+
+def test_preview_kiosk_attaches_modifier_groups(monkeypatch):
+    from schemas_preview_kiosk import PreviewKioskRenderRequest
+    from services import preview_kiosk_service
+
+    business_id = uuid4()
+    user_id = uuid4()
+    product_id = uuid4()
+
+    fake_business = {"id": str(business_id), "name": "Preview Cafe"}
+    fake_product = {"id": str(product_id), "name": "Burger", "is_available": True}
+    fake_group = {"id": "mg-1", "product_id": str(product_id), "name": "Toppings", "options": [{"id": "opt-1", "name": "Cheese"}]}
+
+    monkeypatch.setattr(preview_kiosk_service.business_service, "assert_business_access", lambda _c, _b, _u, _r: fake_business)
+    monkeypatch.setattr(preview_kiosk_service, "list_categories", lambda _c, _b: [])
+    monkeypatch.setattr(preview_kiosk_service, "list_products", lambda _c, _b, include_unavailable=True: [dict(fake_product)])
+    monkeypatch.setattr(preview_kiosk_service, "list_modifier_groups_for_products", lambda _c, _b, _pids: {str(product_id): [fake_group]})
+
+    request = PreviewKioskRenderRequest(business_id=business_id, draft={})
+    result = preview_kiosk_service.render_preview_kiosk(object(), user_id, request)
+
+    assert len(result["products"]) == 1
+    assert result["products"][0]["modifier_groups"] == [fake_group]
