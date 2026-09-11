@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { PageContainer } from "@/components/layout/DashboardPrimitives";
 
 export default function DashboardNotFound() {
   return (
-    <PageContainer width="compact" style={{ padding: "48px 16px" }}>
+    <div className="mt-page-container mt-page-container--compact" style={{ padding: "48px 16px" }}>
       <div
         className="mt-feedback-state"
         style={{
@@ -42,6 +41,6 @@ export default function DashboardNotFound() {
           </Link>
         </div>
       </div>
-    </PageContainer>
+    </div>
   );
 }
