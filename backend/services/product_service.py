@@ -99,8 +99,17 @@ def create_product(client: DbClient, business_id: UUID, user_id: UUID, payload: 
     response = client.table("products").insert(data).execute()
     if not response.data:
         raise HTTPException(status_code=400, detail="Product could not be created.")
+    row = response.data[0]
+    client.table("audit_logs").insert({
+        "business_id": str(business_id),
+        "user_id": str(user_id),
+        "action": "product_created",
+        "entity": "product",
+        "entity_id": str(row["id"]),
+        "metadata": {"name": row.get("name"), "price": float(row.get("price") or 0)},
+    }).execute()
     cache_service.invalidate_business(client, str(business_id))
-    return response.data[0]
+    return row
 
 
 def update_product(client: DbClient, product_id: UUID, user_id: UUID, payload: ProductUpdate) -> dict:
@@ -121,8 +130,17 @@ def update_product(client: DbClient, product_id: UUID, user_id: UUID, payload: P
     )
     if not response.data:
         raise HTTPException(status_code=404, detail="Product not found.")
+    row = response.data[0]
+    client.table("audit_logs").insert({
+        "business_id": str(business_id),
+        "user_id": str(user_id),
+        "action": "product_updated",
+        "entity": "product",
+        "entity_id": str(product_id),
+        "metadata": {"name": row.get("name"), "fields": sorted(data)},
+    }).execute()
     cache_service.invalidate_business(client, str(business_id))
-    return response.data[0]
+    return row
 
 
 def _normalize_menu_status_fields(data: dict, explicitly_set: set[str]) -> None:
@@ -151,6 +169,14 @@ def delete_product(client: DbClient, product_id: UUID, user_id: UUID) -> None:
         client.table("products").update({"menu_status": "hidden", "is_available": False}).eq("id", str(product_id)).eq("business_id", str(business_id)).execute()
     else:
         client.table("products").delete().eq("id", str(product_id)).eq("business_id", str(business_id)).execute()
+    client.table("audit_logs").insert({
+        "business_id": str(business_id),
+        "user_id": str(user_id),
+        "action": "product_deleted",
+        "entity": "product",
+        "entity_id": str(product_id),
+        "metadata": {"name": product.get("name")},
+    }).execute()
     cache_service.invalidate_business(client, str(business_id))
 
 

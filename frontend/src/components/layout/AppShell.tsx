@@ -16,7 +16,7 @@ const modules: { id: ModuleId; label: string; icon: IconName; items: string[] }[
   { id: "insights", label: "Insights", icon: "analytics", items: ["Sales & Orders", "Menu Performance", "Trends", "Reports"] },
   { id: "operations", label: "Operations", icon: "lightning", items: ["Live Orders", "Order History", "Kitchen Display", "Counter POS", "Inventory", "Devices", "Alerts"] },
   { id: "kiosk", label: "Kiosk & Menu", icon: "sparkles", items: ["Manage Menu", "Availability", "Promotions", "Kiosk Screens", "Welcome Screen", "Branding & Theme", "QR Codes", "Preview Kiosk", "Test & Publish"] },
-  { id: "administration", label: "Administration", icon: "settings", items: ["Payments", "Locations", "Team & Access", "Integrations", "Business Settings", "Activity Log"] },
+  { id: "administration", label: "Administration", icon: "settings", items: ["Business Settings", "Payments", "Locations", "Team & Access", "Integrations", "Activity Log"] },
 ];
 
 const insightRoutes: Record<string, string> = {
@@ -46,11 +46,11 @@ const kioskRoutes: Record<string, string> = {
   "Test & Publish": "/dashboard/kiosk-experience/publish",
 };
 const administrationRoutes: Record<string, string> = {
+  "Business Settings": "/dashboard/administration/business-settings",
   Payments: "/dashboard/administration/payments",
   Locations: "/dashboard/administration/locations",
   "Team & Access": "/dashboard/administration/team",
   Integrations: "/dashboard/administration/integrations",
-  "Business Settings": "/dashboard/administration/business-settings",
   "Activity Log": "/dashboard/administration/activity-log",
 };
 
@@ -149,7 +149,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
         </> : <>
           <Link href="/dashboard" className="mt-dashboard-home" aria-current={pathname === "/dashboard" ? "page" : undefined}><Icon name="home" /><span>Home</span></Link>
           <div className="mt-dashboard-modules" role="group" aria-label="Dashboard Modules">
-            {modules.map((module) => <button type="button" key={module.id} aria-label={`Open ${module.label === "Kiosk & Menu" ? "Kiosk and Menu" : module.label}`} aria-pressed={selection === module.id} onClick={() => { if (module.id === "insights") router.push(insightRoutes["Sales & Orders"]); if (module.id === "operations") router.push(operationsRoutes["Live Orders"]); if (module.id === "kiosk") router.push(kioskRoutes["Manage Menu"]); if (module.id === "administration") router.push("/dashboard/administration"); }}><Icon name={module.icon} /><span>{module.label}</span></button>)}
+            {modules.map((module) => <button type="button" key={module.id} aria-label={`Open ${module.label === "Kiosk & Menu" ? "Kiosk and Menu" : module.label}`} aria-pressed={selection === module.id} onClick={() => { if (module.id === "insights") router.push(insightRoutes["Sales & Orders"]); if (module.id === "operations") router.push(operationsRoutes["Live Orders"]); if (module.id === "kiosk") router.push(kioskRoutes["Manage Menu"]); if (module.id === "administration") router.push(administrationRoutes["Business Settings"]); }}><Icon name={module.icon} /><span>{module.label}</span></button>)}
           </div>
           {selectedModule && <nav className="mt-dashboard-context" aria-label={`${selectedModule.label} Navigation`}><h2>{selectedModule.label}</h2>{selectedModule.items.map((item) => { const href = insightRoutes[item] || operationsRoutes[item] || kioskRoutes[item] || administrationRoutes[item]; return href ? <Link href={href} aria-current={pathname === href.split("?")[0] ? "page" : undefined} key={item}>{item}</Link> : <button type="button" aria-disabled="true" title={`Planned: ${item}`} key={item}>{item}</button>; })}</nav>}
           <div className="mt-dashboard-test"><Link href="/dashboard/test"><Icon name="flask" /><span><strong>Test Device</strong><small>Test kiosk, kitchen &amp; counter</small></span><Icon name="chevron" /></Link></div>

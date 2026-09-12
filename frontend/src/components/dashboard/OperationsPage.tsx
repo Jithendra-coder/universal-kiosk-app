@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useBusiness } from "@/components/layout/BusinessProvider";
 import { FilterBar, PageContainer, PageHeader, SectionHeader, Stack } from "@/components/layout/DashboardPrimitives";
-import { Button, DataState, DataTable, DetailsDrawer, SearchInput, Select, SegmentedControl, Skeleton, StatusPill } from "@/components/ui/DashboardUI";
+import { Button, DataState, DataTable, DetailsDrawer, SearchInput, Select, SegmentedControl, StatusPill } from "@/components/ui/DashboardUI";
 import { AutoRecoveringState } from "@/components/ui/AutoRecoveringState";
 import { OperationsSkeleton } from "@/components/ui/Skeletons";
 import { api, assetUrl } from "@/lib/api";

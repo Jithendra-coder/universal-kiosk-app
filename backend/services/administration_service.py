@@ -87,24 +87,44 @@ def delete_location(client: DbClient, business_id: UUID, user_id: UUID, location
 def activity_log(client: DbClient, business_id: UUID, user_id: UUID, search: str | None = None, limit: int = 50, offset: int = 0) -> dict:
     assert_business_access(client, business_id, user_id, FULL_ACCESS_ROLES)
     bounded_limit = max(1, min(limit, 100))
+    params: dict[str, object] = {
+        "business_id": str(business_id),
+        "limit": bounded_limit,
+        "offset": max(0, offset),
+    }
+    search_clause = ""
+    if search and search.strip():
+        search_clause = "and (a.action ilike %(search_like)s or coalesce(a.entity, '') ilike %(search_like)s or coalesce(u.email, '') ilike %(search_like)s or coalesce(u.full_name, '') ilike %(search_like)s)"
+        params["search_like"] = f"%{search.strip()}%"
+
     rows = client.fetch_all(
-        """
+        f"""
         select a.id, a.business_id, a.user_id, a.action, a.entity, a.entity_id, a.metadata, a.created_at,
                u.full_name as actor_name, u.email as actor_email, bs.role as actor_role
         from audit_logs a
         left join app_users u on u.id = a.user_id
         left join business_staff bs on bs.business_id = a.business_id and bs.user_id = a.user_id
         where a.business_id = %(business_id)s
-          and (%(search)s is null or a.action ilike %(search_like)s or coalesce(a.entity, '') ilike %(search_like)s or coalesce(u.email, '') ilike %(search_like)s)
+          {search_clause}
         order by a.created_at desc limit %(limit)s offset %(offset)s
         """,
-        {"business_id": str(business_id), "search": search or None, "search_like": f"%{search}%", "limit": bounded_limit, "offset": max(0, offset)},
+        params,
     )
     return {"events": [_safe_event(row) for row in rows], "has_more": len(rows) == bounded_limit}
 
 
 def _safe_event(row: dict) -> dict:
     safe = dict(row)
+    if "created_at" in safe and hasattr(safe["created_at"], "isoformat"):
+        safe["created_at"] = safe["created_at"].isoformat()
+    if "id" in safe:
+        safe["id"] = str(safe["id"])
+    if "business_id" in safe and safe["business_id"]:
+        safe["business_id"] = str(safe["business_id"])
+    if "user_id" in safe and safe["user_id"]:
+        safe["user_id"] = str(safe["user_id"])
+    if "entity_id" in safe and safe["entity_id"]:
+        safe["entity_id"] = str(safe["entity_id"])
     metadata = dict(safe.get("metadata") or {})
     for key in list(metadata):
         if any(secret in key.lower() for secret in ("secret", "token", "password", "key", "signature", "payload")):
@@ -118,7 +138,10 @@ def overview(client: DbClient, business_id: UUID, user_id: UUID) -> dict:
     locations = list_locations(client, business_id, user_id)
     payments = client.table("business_payment_accounts").select("provider,connection_status,is_enabled,is_default").eq("business_id", str(business_id)).execute().data or []
     staff = client.table("business_staff").select("id").eq("business_id", str(business_id)).execute().data or []
-    events = activity_log(client, business_id, user_id, limit=10)["events"]
+    try:
+        events = activity_log(client, business_id, user_id, limit=10).get("events", [])
+    except Exception:
+        events = []
     checks = [
         {"key": "payments", "status": "ready" if any(row.get("connection_status") in {"active", "connected"} and row.get("is_enabled") for row in payments) else "attention", "detail": "A payment provider is connected." if payments else "Connect Stripe, Razorpay, or Paytm."},
         {"key": "locations", "status": "ready" if locations else "attention", "detail": f"{len(locations)} location{'s' if len(locations) != 1 else ''} configured." if locations else "Add the first location."},
@@ -127,3 +150,4 @@ def overview(client: DbClient, business_id: UUID, user_id: UUID) -> dict:
         {"key": "integrations", "status": "unavailable", "detail": "No external integration contract is connected."},
     ]
     return {"checks": checks, "recent_activity": events, "updated_at": business.get("updated_at")}
+

@@ -1,5 +1,5 @@
-import { AdministrationModule } from "@/components/dashboard/AdministrationModule";
+import { redirect } from "next/navigation";
 
-export default function AdministrationOverviewPage() {
-  return <AdministrationModule mode="overview" />;
+export default function AdministrationPage() {
+  redirect("/dashboard/administration/business-settings");
 }

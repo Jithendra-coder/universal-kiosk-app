@@ -56,7 +56,9 @@ export function useAutoReconnect({
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const onReconnectRef = useRef(onReconnect);
-  onReconnectRef.current = onReconnect;
+  useEffect(() => {
+    onReconnectRef.current = onReconnect;
+  }, [onReconnect]);
 
   const inFlightRef = useRef(false);
 
@@ -85,8 +87,6 @@ export function useAutoReconnect({
 
   useEffect(() => {
     if (!enabled || !isError || typeof window === "undefined") {
-      setRetryCount(0);
-      setIsReconnecting(false);
       return;
     }
 
