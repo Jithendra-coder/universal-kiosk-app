@@ -107,7 +107,7 @@ export default function BusinessTypePage() {
                       </span>
                     )}
                     <span className="mt-business-type-option__visual">
-                      <Image src={`/business-types/${id}.png`} alt="" fill sizes="63px" priority />
+                      <Image src={`/business-types/${id}.webp`} alt="" fill sizes="63px" priority />
                     </span>
                     <span className="mt-business-type-option__label">{label}</span>
                   </label>

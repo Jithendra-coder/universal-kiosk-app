@@ -390,12 +390,15 @@ def test_bearer_fallback_still_works_without_cookie(monkeypatch):
 
 
 def test_auth_payload_validation_rejects_malformed_signup():
-    response = client.post(
-        "/api/auth/signup",
-        json={"email": "qa@example.test", "password": "short"},
-    )
-
-    assert response.status_code == 422
+    app.dependency_overrides[get_db_client] = lambda: object()
+    try:
+        response = client.post(
+            "/api/auth/signup",
+            json={"email": "qa@example.test", "password": "short"},
+        )
+        assert response.status_code == 422
+    finally:
+        app.dependency_overrides.clear()
 
 
 def test_production_kiosk_rejects_preview_mode_before_db_lookup():

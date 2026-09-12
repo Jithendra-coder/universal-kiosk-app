@@ -150,7 +150,7 @@ export default function BusinessDetailsPage() {
           </div>
 
           <aside className="mt-business-media">
-            <div><span className="mt-business-media__label">Selected Business</span><div className="mt-business-type-preview"><Image src={`/business-types/${typeId}.png`} alt="" width={80} height={80} /><strong>{typeId.replaceAll("-", " ")}</strong></div></div>
+            <div><span className="mt-business-media__label">Selected Business</span><div className="mt-business-type-preview"><Image src={`/business-types/${typeId}.webp`} alt="" width={80} height={80} /><strong>{typeId.replaceAll("-", " ")}</strong></div></div>
             <label className="mt-logo-upload" htmlFor="business-logo"><span>Business Logo</span><div>{logo ? logo.name : "Upload logo"}</div><input id="business-logo" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={(event) => setLogo(event.target.files?.[0] || null)} /></label>
           </aside>
         </div>

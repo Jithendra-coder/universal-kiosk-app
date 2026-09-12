@@ -58,3 +58,29 @@ def test_cache_does_not_hide_database_errors(monkeypatch):
 
     with pytest.raises(RuntimeError, match="database failure"):
         cache_service.invalidate_business(FailingDb(), "business-id")
+
+
+def test_in_memory_fallback_cache_stores_and_invalidates(monkeypatch):
+    monkeypatch.setattr(cache_service, "_redis_client", lambda: None)
+    monkeypatch.setattr(
+        cache_service,
+        "get_settings",
+        lambda: SimpleNamespace(redis_menu_ttl_seconds=60),
+    )
+
+    cache_service.invalidate_slug("test-slug")
+    assert cache_service.get_menu("test-slug") is None
+
+    menu_data = {"categories": [{"id": "c1", "name": "Coffee"}], "products": []}
+    cache_service.set_menu("test-slug", menu_data)
+
+    cached = cache_service.get_menu("test-slug")
+    assert cached == menu_data
+
+    # Ensure mutation of retrieved data doesn't corrupt cache
+    cached["categories"].append({"id": "c2", "name": "Tea"})
+    assert len(cache_service.get_menu("test-slug")["categories"]) == 1
+
+    cache_service.invalidate_slug("test-slug")
+    assert cache_service.get_menu("test-slug") is None
+

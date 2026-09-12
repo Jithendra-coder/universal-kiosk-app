@@ -316,7 +316,12 @@ def sessions(client: DbClient, business_id: UUID, user_id: UUID, current_session
 def revoke_session(client: DbClient, business_id: UUID, user_id: UUID, session_id: UUID, all_others: bool = False, current_session_id: UUID | None = None) -> int:
     _admin(client, business_id, user_id)
     if all_others:
-        count = client.execute_command("update auth_sessions set revoked_at=now(),revoked_by=%(actor)s where user_id=%(user_id)s and revoked_at is null and id<>coalesce(%(current)s,id)", {"user_id": str(user_id), "actor": str(user_id), "current": str(current_session_id) if current_session_id else None})
+        sql = "update auth_sessions set revoked_at=now(),revoked_by=%(actor)s where user_id=%(user_id)s and revoked_at is null"
+        params: dict[str, str | None] = {"user_id": str(user_id), "actor": str(user_id)}
+        if current_session_id:
+            sql += " and id <> %(current)s::uuid"
+            params["current"] = str(current_session_id)
+        count = client.execute_command(sql, params)
     else:
         count = client.execute_command("update auth_sessions set revoked_at=now(),revoked_by=%(actor)s where id=%(id)s and user_id=%(user_id)s and revoked_at is null", {"id": str(session_id), "user_id": str(user_id), "actor": str(user_id)})
     _audit(client, business_id, user_id, "session_revoked", "auth_session", session_id, {"all_others": all_others})
